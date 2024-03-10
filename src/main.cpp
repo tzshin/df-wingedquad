@@ -4,7 +4,9 @@
 //Last Updated: 7/29/2022
 //Version: Beta 1.3
  
+
 //========================================================================================================================//
+
 
 //CREDITS + SPECIAL THANKS
 /*
@@ -21,7 +23,6 @@ http://www.bolderflight.com
 Thank you to:
 RcGroups 'jihlein' - IMU implementation overhaul + SBUS implementation.
 Everyone that sends me pictures and videos of your flying creations! -Nick
-
 */
 
 
@@ -35,11 +36,13 @@ Everyone that sends me pictures and videos of your flying creations! -Nick
 //                                                 USER-SPECIFIED DEFINES                                                 //                                                                 
 //========================================================================================================================//
 
+
 //Uncomment only one receiver type
-#define USE_PWM_RX
+//#define USE_PWM_RX
 //#define USE_PPM_RX
 //#define USE_SBUS_RX
 //#define USE_DSM_RX
+#define USE_CRSF_RX
 static const uint8_t num_DSM_channels = 6; //If using DSM RX, change this to match the number of transmitter channels you have
 
 //Uncomment only one IMU
@@ -47,21 +50,19 @@ static const uint8_t num_DSM_channels = 6; //If using DSM RX, change this to mat
 //#define USE_MPU9250_SPI
 
 //Uncomment only one full scale gyro range (deg/sec)
-#define GYRO_250DPS //Default
-//#define GYRO_500DPS
+//#define GYRO_250DPS //Default
+#define GYRO_500DPS
 //#define GYRO_1000DPS
 //#define GYRO_2000DPS
 
 //Uncomment only one full scale accelerometer range (G's)
-#define ACCEL_2G //Default
-//#define ACCEL_4G
+//#define ACCEL_2G //Default
+#define ACCEL_4G
 //#define ACCEL_8G
 //#define ACCEL_16G
 
 
-
 //========================================================================================================================//
-
 
 
 //REQUIRED LIBRARIES (included with download in main sketch folder)
@@ -72,10 +73,11 @@ static const uint8_t num_DSM_channels = 6; //If using DSM RX, change this to mat
 
 #if defined USE_SBUS_RX
   #include "SBUS.h"   //sBus interface
-#endif
-
-#if defined USE_DSM_RX
+#elif defined USE_DSM_RX
   #include "DSMRX.h"  
+#elif defined USE_CRSF_RX
+  #include "CRSFforArduino.hpp"
+  CRSFforArduino *crsf = nullptr;
 #endif
 
 #if defined USE_MPU6050_I2C
@@ -89,9 +91,7 @@ static const uint8_t num_DSM_channels = 6; //If using DSM RX, change this to mat
 #endif
 
 
-
 //========================================================================================================================//
-
 
 
 //Setup gyro and accel full scale value selection and scale factor
@@ -145,10 +145,10 @@ static const uint8_t num_DSM_channels = 6; //If using DSM RX, change this to mat
 #endif
 
 
-
 //========================================================================================================================//
 //                                               USER-SPECIFIED VARIABLES                                                 //                           
 //========================================================================================================================//
+
 
 //Radio failsafe values for every channel in the event that bad reciever data is detected. Recommended defaults:
 unsigned long channel_1_fs = 1000; //thro
@@ -157,6 +157,10 @@ unsigned long channel_3_fs = 1500; //elev
 unsigned long channel_4_fs = 1500; //rudd
 unsigned long channel_5_fs = 2000; //gear, greater than 1500 = throttle cut
 unsigned long channel_6_fs = 2000; //aux1
+#if defined USE_CRSF_RX
+  unsigned long channel_7_fs = 2000; //aux2
+  unsigned long channel_8_fs = 2000; //aux3
+#endif
 
 //Filter parameters - Defaults tuned for 2kHz loop rate; Do not touch unless you know what you are doing:
 float B_madgwick = 0.04;  //Madgwick filter parameter
@@ -207,10 +211,10 @@ float Ki_yaw = 0.05;          //Yaw I-gain
 float Kd_yaw = 0.00015;       //Yaw D-gain (be careful when increasing too high, motors will begin to overheat!)
 
 
-
 //========================================================================================================================//
 //                                                     DECLARE PINS                                                       //                           
 //========================================================================================================================//                                          
+
 
 //NOTE: Pin 13 is reserved for onboard LED, pins 18 and 19 are reserved for the MPU6050 IMU for default setup
 //Radio:
@@ -227,8 +231,6 @@ const int m1Pin = 0;
 const int m2Pin = 1;
 const int m3Pin = 2;
 const int m4Pin = 3;
-const int m5Pin = 4;
-const int m6Pin = 5;
 //PWM servo or ESC outputs:
 const int servo1Pin = 6;
 const int servo2Pin = 7;
@@ -246,9 +248,7 @@ PWMServo servo6;
 PWMServo servo7;
 
 
-
 //========================================================================================================================//
-
 
 
 //DECLARE GLOBAL VARIABLES
@@ -263,6 +263,10 @@ bool blinkAlternate;
 //Radio communication:
 unsigned long channel_1_pwm, channel_2_pwm, channel_3_pwm, channel_4_pwm, channel_5_pwm, channel_6_pwm;
 unsigned long channel_1_pwm_prev, channel_2_pwm_prev, channel_3_pwm_prev, channel_4_pwm_prev;
+#if defined USE_CRSF_RX
+  //Support up to 16 channels for CRSF RX, currently declared to 8
+  unsigned long channel_7_pwm, channel_8_pwm;
+#endif
 
 #if defined USE_SBUS_RX
   SBUS sbus(Serial5);
@@ -298,8 +302,8 @@ float error_pitch, error_pitch_prev, pitch_des_prev, integral_pitch, integral_pi
 float error_yaw, error_yaw_prev, integral_yaw, integral_yaw_prev, derivative_yaw, yaw_PID = 0;
 
 //Mixer
-float m1_command_scaled, m2_command_scaled, m3_command_scaled, m4_command_scaled, m5_command_scaled, m6_command_scaled;
-int m1_command_PWM, m2_command_PWM, m3_command_PWM, m4_command_PWM, m5_command_PWM, m6_command_PWM;
+float m1_command_scaled, m2_command_scaled, m3_command_scaled, m4_command_scaled;
+int m1_command_PWM, m2_command_PWM, m3_command_PWM, m4_command_PWM;
 float s1_command_scaled, s2_command_scaled, s3_command_scaled, s4_command_scaled, s5_command_scaled, s6_command_scaled, s7_command_scaled;
 int s1_command_PWM, s2_command_PWM, s3_command_PWM, s4_command_PWM, s5_command_PWM, s6_command_PWM, s7_command_PWM;
 
@@ -309,14 +313,92 @@ bool armedFly = false;
 //Radio
 long rising_edge_start_1, rising_edge_start_2, rising_edge_start_3, rising_edge_start_4, rising_edge_start_5, rising_edge_start_6; 
 unsigned long channel_1_raw, channel_2_raw, channel_3_raw, channel_4_raw, channel_5_raw, channel_6_raw;
+#if defined USE_CRSF_RX
+  //Support up to 16 channels for CRSF RX, currently declared to 8
+  int crsf_channel_count = 8;
+  unsigned long channel_7_raw, channel_8_raw;
+#endif
 int ppm_counter = 0;
 unsigned long time_ms = 0;
+
+
+//========================================================================================================================//
+//                                                       FORWARD                                                          //                           
+//========================================================================================================================//
+
+
+void radioSetup();
+unsigned long getRadioPWM(int ch_num);
+void serialEvent3(void);
+void getPPM();
+void getCh1();
+void getCh2();
+void getCh3();
+void getCh4();
+void getCh5();
+void getCh6();
 
 
 //========================================================================================================================//
 //                                                        RADIO                                                           //                           
 //========================================================================================================================//
 
+
+void radioSetup() {
+  //PPM Receiver 
+  #if defined USE_PPM_RX
+    //Declare interrupt pin
+    pinMode(PPM_Pin, INPUT_PULLUP);
+    delay(20);
+    //Attach interrupt and point to corresponding ISR function
+    attachInterrupt(digitalPinToInterrupt(PPM_Pin), getPPM, CHANGE);
+
+  //PWM Receiver
+  #elif defined USE_PWM_RX
+    //Declare interrupt pins 
+    pinMode(ch1Pin, INPUT_PULLUP);
+    pinMode(ch2Pin, INPUT_PULLUP);
+    pinMode(ch3Pin, INPUT_PULLUP);
+    pinMode(ch4Pin, INPUT_PULLUP);
+    pinMode(ch5Pin, INPUT_PULLUP);
+    pinMode(ch6Pin, INPUT_PULLUP);
+    delay(20);
+    //Attach interrupt and point to corresponding ISR functions
+    attachInterrupt(digitalPinToInterrupt(ch1Pin), getCh1, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(ch2Pin), getCh2, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(ch3Pin), getCh3, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(ch4Pin), getCh4, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(ch5Pin), getCh5, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(ch6Pin), getCh6, CHANGE);
+    delay(20);
+
+  //SBUS Recevier 
+  #elif defined USE_SBUS_RX
+    sbus.begin();
+
+  //DSM receiver
+  #elif defined USE_DSM_RX
+    Serial3.begin(115000);
+
+  #elif defined USE_CRSF_RX
+    crsf = new CRSFforArduino();
+    if (!crsf->begin())
+    {
+        crsf->end();
+
+        delete crsf;
+        crsf = nullptr;
+
+        Serial.println("CRSF for Arduino initialisation failed!");
+        while (1)
+        {
+            delay(10);
+        }
+    }
+  #else
+    // #error No RX type defined...
+  #endif
+}
 
 unsigned long getRadioPWM(int ch_num) {
   //DESCRIPTION: Get current radio commands from interrupt routines 
@@ -456,46 +538,6 @@ void getCh6() {
   }
 }
 
-void radioSetup() {
-  //PPM Receiver 
-  #if defined USE_PPM_RX
-    //Declare interrupt pin
-    pinMode(PPM_Pin, INPUT_PULLUP);
-    delay(20);
-    //Attach interrupt and point to corresponding ISR function
-    attachInterrupt(digitalPinToInterrupt(PPM_Pin), getPPM, CHANGE);
-
-  //PWM Receiver
-  #elif defined USE_PWM_RX
-    //Declare interrupt pins 
-    pinMode(ch1Pin, INPUT_PULLUP);
-    pinMode(ch2Pin, INPUT_PULLUP);
-    pinMode(ch3Pin, INPUT_PULLUP);
-    pinMode(ch4Pin, INPUT_PULLUP);
-    pinMode(ch5Pin, INPUT_PULLUP);
-    pinMode(ch6Pin, INPUT_PULLUP);
-    delay(20);
-    //Attach interrupt and point to corresponding ISR functions
-    attachInterrupt(digitalPinToInterrupt(ch1Pin), getCh1, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(ch2Pin), getCh2, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(ch3Pin), getCh3, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(ch4Pin), getCh4, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(ch5Pin), getCh5, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(ch6Pin), getCh6, CHANGE);
-    delay(20);
-
-  //SBUS Recevier 
-  #elif defined USE_SBUS_RX
-    sbus.begin();
-
-  //DSM receiver
-  #elif defined USE_DSM_RX
-    Serial3.begin(115000);
-  #else
-    // #error No RX type defined...
-  #endif
-}
-
 
 //========================================================================================================================//
 //                                                      FUNCTIONS                                                         //
@@ -594,8 +636,6 @@ void controlMixer() {
   m2_command_scaled = thro_des - pitch_PID - roll_PID - yaw_PID; //Front Right
   m3_command_scaled = thro_des + pitch_PID - roll_PID + yaw_PID; //Back Right
   m4_command_scaled = thro_des + pitch_PID + roll_PID - yaw_PID; //Back Left
-  m5_command_scaled = 0;
-  m6_command_scaled = 0;
 
   //0.5 is centered servo, 0.0 is zero throttle if connecting to ESC for conventional PWM, 1.0 is max throttle
   s1_command_scaled = 0;
@@ -1245,15 +1285,11 @@ void scaleCommands() {
   m2_command_PWM = m2_command_scaled*125 + 125;
   m3_command_PWM = m3_command_scaled*125 + 125;
   m4_command_PWM = m4_command_scaled*125 + 125;
-  m5_command_PWM = m5_command_scaled*125 + 125;
-  m6_command_PWM = m6_command_scaled*125 + 125;
   //Constrain commands to motors within oneshot125 bounds
   m1_command_PWM = constrain(m1_command_PWM, 125, 250);
   m2_command_PWM = constrain(m2_command_PWM, 125, 250);
   m3_command_PWM = constrain(m3_command_PWM, 125, 250);
   m4_command_PWM = constrain(m4_command_PWM, 125, 250);
-  m5_command_PWM = constrain(m5_command_PWM, 125, 250);
-  m6_command_PWM = constrain(m6_command_PWM, 125, 250);
 
   //Scaled to 0-180 for servo library
   s1_command_PWM = s1_command_scaled*180;
@@ -1320,6 +1356,20 @@ void getCommands() {
         channel_5_pwm = values[4];
         channel_6_pwm = values[5];
     }
+
+  #elif defined USE_CRSF_RX
+    if (crsf != nullptr) {
+      crsf->update();
+
+      channel_1_pwm = crsf->rcToUs(crsf->getChannel(1));
+      channel_2_pwm = crsf->rcToUs(crsf->getChannel(2));
+      channel_3_pwm = crsf->rcToUs(crsf->getChannel(3));
+      channel_4_pwm = crsf->rcToUs(crsf->getChannel(4));
+      channel_5_pwm = crsf->rcToUs(crsf->getChannel(5));
+      channel_6_pwm = crsf->rcToUs(crsf->getChannel(6));
+      channel_7_pwm = crsf->rcToUs(crsf->getChannel(7));
+      channel_8_pwm = crsf->rcToUs(crsf->getChannel(8));
+    }
   #endif
   
   //Low-pass the critical commands and update previous values
@@ -1351,6 +1401,10 @@ void failSafe() {
   int check4 = 0;
   int check5 = 0;
   int check6 = 0;
+  #if defined USE_CRSF_RX
+    int check7 = 0;
+    int check8 = 0;
+  #endif
 
   //Triggers for failure criteria
   if (channel_1_pwm > maxVal || channel_1_pwm < minVal) check1 = 1;
@@ -1359,18 +1413,36 @@ void failSafe() {
   if (channel_4_pwm > maxVal || channel_4_pwm < minVal) check4 = 1;
   if (channel_5_pwm > maxVal || channel_5_pwm < minVal) check5 = 1;
   if (channel_6_pwm > maxVal || channel_6_pwm < minVal) check6 = 1;
+  #if defined USE_CRSF_RX
+    if (channel_7_pwm > maxVal || channel_7_pwm < minVal) check7 = 1;
+    if (channel_8_pwm > maxVal || channel_8_pwm < minVal) check8 = 1;
+  #endif
 
   //If any failures, set to default failsafe values
-  if ((check1 + check2 + check3 + check4 + check5 + check6) > 0) {
-    channel_1_pwm = channel_1_fs;
-    channel_2_pwm = channel_2_fs;
-    channel_3_pwm = channel_3_fs;
-    channel_4_pwm = channel_4_fs;
-    channel_5_pwm = channel_5_fs;
-    channel_6_pwm = channel_6_fs;
-  }
+  #if defined USE_CRSF_RX
+    if ((check1 + check2 + check3 + check4 + check5 + check6 + check7 + check8) > 0) {
+      channel_1_pwm = channel_1_fs;
+      channel_2_pwm = channel_2_fs;
+      channel_3_pwm = channel_3_fs;
+      channel_4_pwm = channel_4_fs;
+      channel_5_pwm = channel_5_fs;
+      channel_6_pwm = channel_6_fs;
+      channel_7_pwm = channel_7_fs;
+      channel_8_pwm = channel_8_fs;
+    }
+  #else
+    if ((check1 + check2 + check3 + check4 + check5 + check6) > 0) {
+      channel_1_pwm = channel_1_fs;
+      channel_2_pwm = channel_2_fs;
+      channel_3_pwm = channel_3_fs;
+      channel_4_pwm = channel_4_fs;
+      channel_5_pwm = channel_5_fs;
+      channel_6_pwm = channel_6_fs;
+    }
+  #endif
 }
 
+// FIXME: Reduce motor count to 4
 void commandMotors() {
   //DESCRIPTION: Send pulses to motor pins, oneshot125 protocol
   /*
@@ -1383,20 +1455,16 @@ void commandMotors() {
   int flagM2 = 0;
   int flagM3 = 0;
   int flagM4 = 0;
-  int flagM5 = 0;
-  int flagM6 = 0;
   
   //Write all motor pins high
   digitalWrite(m1Pin, HIGH);
   digitalWrite(m2Pin, HIGH);
   digitalWrite(m3Pin, HIGH);
   digitalWrite(m4Pin, HIGH);
-  digitalWrite(m5Pin, HIGH);
-  digitalWrite(m6Pin, HIGH);
   pulseStart = micros();
 
   //Write each motor pin low as correct pulse length is reached
-  while (wentLow < 6 ) { //Keep going until final (6th) pulse is finished, then done
+  while (wentLow < 4 ) { //Keep going until final (4th) pulse is finished, then done
     timer = micros();
     if ((m1_command_PWM <= timer - pulseStart) && (flagM1==0)) {
       digitalWrite(m1Pin, LOW);
@@ -1417,17 +1485,7 @@ void commandMotors() {
       digitalWrite(m4Pin, LOW);
       wentLow = wentLow + 1;
       flagM4 = 1;
-    } 
-    if ((m5_command_PWM <= timer - pulseStart) && (flagM5==0)) {
-      digitalWrite(m5Pin, LOW);
-      wentLow = wentLow + 1;
-      flagM5 = 1;
-    } 
-    if ((m6_command_PWM <= timer - pulseStart) && (flagM6==0)) {
-      digitalWrite(m6Pin, LOW);
-      wentLow = wentLow + 1;
-      flagM6 = 1;
-    } 
+    }
   }
 }
 
@@ -1469,8 +1527,6 @@ void calibrateESCs() {
       m2_command_scaled = thro_des;
       m3_command_scaled = thro_des;
       m4_command_scaled = thro_des;
-      m5_command_scaled = thro_des;
-      m6_command_scaled = thro_des;
       s1_command_scaled = thro_des;
       s2_command_scaled = thro_des;
       s3_command_scaled = thro_des;
@@ -1579,8 +1635,6 @@ void throttleCut() {
     m2_command_PWM = 120;
     m3_command_PWM = 120;
     m4_command_PWM = 120;
-    m5_command_PWM = 120;
-    m6_command_PWM = 120;
 
     //Uncomment if using servo PWM variables to control motor ESCs
     //s1_command_PWM = 0;
@@ -1744,10 +1798,6 @@ void printMotorCommands() {
     Serial.print(m3_command_PWM);
     Serial.print(F(" m4_command:"));
     Serial.print(m4_command_PWM);
-    Serial.print(F(" m5_command:"));
-    Serial.print(m5_command_PWM);
-    Serial.print(F(" m6_command:"));
-    Serial.println(m6_command_PWM);
   }
 }
 
@@ -1795,8 +1845,6 @@ void setup() {
   pinMode(m2Pin, OUTPUT);
   pinMode(m3Pin, OUTPUT);
   pinMode(m4Pin, OUTPUT);
-  pinMode(m5Pin, OUTPUT);
-  pinMode(m6Pin, OUTPUT);
   servo1.attach(servo1Pin, 900, 2100); //Pin, min PWM value, max PWM value
   servo2.attach(servo2Pin, 900, 2100);
   servo3.attach(servo3Pin, 900, 2100);
@@ -1848,8 +1896,6 @@ void setup() {
   m2_command_PWM = 125;
   m3_command_PWM = 125;
   m4_command_PWM = 125;
-  m5_command_PWM = 125;
-  m6_command_PWM = 125;
   armMotors(); //Loop over commandMotors() until ESCs happily arm
   
   //Indicate entering main loop with 3 quick blinks
