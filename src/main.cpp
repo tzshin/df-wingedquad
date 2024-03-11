@@ -219,33 +219,35 @@ float Kd_yaw = 0.00015;       //Yaw D-gain (be careful when increasing too high,
 //NOTE: Pin 13 is reserved for onboard LED, pins 18 and 19 are reserved for the MPU6050 IMU for default setup
 //Radio:
 //Note: If using SBUS, connect to pin 21 (RX5), if using DSM, connect to pin 15 (RX3)
-const int ch1Pin = 15; //throttle
-const int ch2Pin = 16; //ail
-const int ch3Pin = 17; //ele
-const int ch4Pin = 20; //rudd
-const int ch5Pin = 21; //gear (throttle cut)
-const int ch6Pin = 22; //aux1 (free aux channel)
-const int PPM_Pin = 23;
+//const int ch1Pin = 15; //throttle
+//const int ch2Pin = 16; //ail
+//const int ch3Pin = 17; //ele
+//const int ch4Pin = 20; //rudd
+//const int ch5Pin = 21; //gear (throttle cut)
+//const int ch6Pin = 22; //aux1 (free aux channel)
+//const int PPM_Pin = 23;
+
 //OneShot125 ESC pin outputs:
 const int m1Pin = 0;
 const int m2Pin = 1;
 const int m3Pin = 2;
 const int m4Pin = 3;
+
 //PWM servo or ESC outputs:
 const int servo1Pin = 6;
 const int servo2Pin = 7;
-const int servo3Pin = 8;
-const int servo4Pin = 9;
-const int servo5Pin = 10;
-const int servo6Pin = 11;
-const int servo7Pin = 12;
+//const int servo3Pin = 8;
+//const int servo4Pin = 9;
+//const int servo5Pin = 10;
+//const int servo6Pin = 11;
+//const int servo7Pin = 12;
 PWMServo servo1;  //Create servo objects to control a servo or ESC with PWM
 PWMServo servo2;
-PWMServo servo3;
-PWMServo servo4;
-PWMServo servo5;
-PWMServo servo6;
-PWMServo servo7;
+//PWMServo servo3;
+//PWMServo servo4;
+//PWMServo servo5;
+//PWMServo servo6;
+//PWMServo servo7;
 
 
 //========================================================================================================================//
@@ -400,143 +402,143 @@ void radioSetup() {
   #endif
 }
 
-unsigned long getRadioPWM(int ch_num) {
-  //DESCRIPTION: Get current radio commands from interrupt routines 
-  unsigned long returnPWM = 0;
+// unsigned long getRadioPWM(int ch_num) {
+//   //DESCRIPTION: Get current radio commands from interrupt routines 
+//   unsigned long returnPWM = 0;
   
-  if (ch_num == 1) {
-    returnPWM = channel_1_raw;
-  }
-  else if (ch_num == 2) {
-    returnPWM = channel_2_raw;
-  }
-  else if (ch_num == 3) {
-    returnPWM = channel_3_raw;
-  }
-  else if (ch_num == 4) {
-    returnPWM = channel_4_raw;
-  }
-  else if (ch_num == 5) {
-    returnPWM = channel_5_raw;
-  }
-  else if (ch_num == 6) {
-    returnPWM = channel_6_raw;
-  }
+//   if (ch_num == 1) {
+//     returnPWM = channel_1_raw;
+//   }
+//   else if (ch_num == 2) {
+//     returnPWM = channel_2_raw;
+//   }
+//   else if (ch_num == 3) {
+//     returnPWM = channel_3_raw;
+//   }
+//   else if (ch_num == 4) {
+//     returnPWM = channel_4_raw;
+//   }
+//   else if (ch_num == 5) {
+//     returnPWM = channel_5_raw;
+//   }
+//   else if (ch_num == 6) {
+//     returnPWM = channel_6_raw;
+//   }
   
-  return returnPWM;
-}
+//   return returnPWM;
+// }
 
 //For DSM type receivers
-void serialEvent3(void)
-{
-  #if defined USE_DSM_RX
-    while (Serial3.available()) {
-        DSM.handleSerialEvent(Serial3.read(), micros());
-    }
-  #endif
-}
+// void serialEvent3(void)
+// {
+//   #if defined USE_DSM_RX
+//     while (Serial3.available()) {
+//         DSM.handleSerialEvent(Serial3.read(), micros());
+//     }
+//   #endif
+// }
 
 //INTERRUPT SERVICE ROUTINES (for reading PWM and PPM)
 
-void getPPM() {
-  unsigned long dt_ppm;
-  int trig = digitalRead(PPM_Pin);
-  if (trig==1) { //Only care about rising edge
-    dt_ppm = micros() - time_ms;
-    time_ms = micros();
+// void getPPM() {
+//   unsigned long dt_ppm;
+//   int trig = digitalRead(PPM_Pin);
+//   if (trig==1) { //Only care about rising edge
+//     dt_ppm = micros() - time_ms;
+//     time_ms = micros();
 
     
-    if (dt_ppm > 5000) { //Waiting for long pulse to indicate a new pulse train has arrived
-      ppm_counter = 0;
-    }
+//     if (dt_ppm > 5000) { //Waiting for long pulse to indicate a new pulse train has arrived
+//       ppm_counter = 0;
+//     }
   
-    if (ppm_counter == 1) { //First pulse
-      channel_1_raw = dt_ppm;
-    }
+//     if (ppm_counter == 1) { //First pulse
+//       channel_1_raw = dt_ppm;
+//     }
   
-    if (ppm_counter == 2) { //Second pulse
-      channel_2_raw = dt_ppm;
-    }
+//     if (ppm_counter == 2) { //Second pulse
+//       channel_2_raw = dt_ppm;
+//     }
   
-    if (ppm_counter == 3) { //Third pulse
-      channel_3_raw = dt_ppm;
-    }
+//     if (ppm_counter == 3) { //Third pulse
+//       channel_3_raw = dt_ppm;
+//     }
   
-    if (ppm_counter == 4) { //Fourth pulse
-      channel_4_raw = dt_ppm;
-    }
+//     if (ppm_counter == 4) { //Fourth pulse
+//       channel_4_raw = dt_ppm;
+//     }
   
-    if (ppm_counter == 5) { //Fifth pulse
-      channel_5_raw = dt_ppm;
-    }
+//     if (ppm_counter == 5) { //Fifth pulse
+//       channel_5_raw = dt_ppm;
+//     }
   
-    if (ppm_counter == 6) { //Sixth pulse
-      channel_6_raw = dt_ppm;
-    }
+//     if (ppm_counter == 6) { //Sixth pulse
+//       channel_6_raw = dt_ppm;
+//     }
     
-    ppm_counter = ppm_counter + 1;
-  }
-}
+//     ppm_counter = ppm_counter + 1;
+//   }
+// }
 
-void getCh1() {
-  int trigger = digitalRead(ch1Pin);
-  if(trigger == 1) {
-    rising_edge_start_1 = micros();
-  }
-  else if(trigger == 0) {
-    channel_1_raw = micros() - rising_edge_start_1;
-  }
-}
+// void getCh1() {
+//   int trigger = digitalRead(ch1Pin);
+//   if(trigger == 1) {
+//     rising_edge_start_1 = micros();
+//   }
+//   else if(trigger == 0) {
+//     channel_1_raw = micros() - rising_edge_start_1;
+//   }
+// }
 
-void getCh2() {
-  int trigger = digitalRead(ch2Pin);
-  if(trigger == 1) {
-    rising_edge_start_2 = micros();
-  }
-  else if(trigger == 0) {
-    channel_2_raw = micros() - rising_edge_start_2;
-  }
-}
+// void getCh2() {
+//   int trigger = digitalRead(ch2Pin);
+//   if(trigger == 1) {
+//     rising_edge_start_2 = micros();
+//   }
+//   else if(trigger == 0) {
+//     channel_2_raw = micros() - rising_edge_start_2;
+//   }
+// }
 
-void getCh3() {
-  int trigger = digitalRead(ch3Pin);
-  if(trigger == 1) {
-    rising_edge_start_3 = micros();
-  }
-  else if(trigger == 0) {
-    channel_3_raw = micros() - rising_edge_start_3;
-  }
-}
+// void getCh3() {
+//   int trigger = digitalRead(ch3Pin);
+//   if(trigger == 1) {
+//     rising_edge_start_3 = micros();
+//   }
+//   else if(trigger == 0) {
+//     channel_3_raw = micros() - rising_edge_start_3;
+//   }
+// }
 
-void getCh4() {
-  int trigger = digitalRead(ch4Pin);
-  if(trigger == 1) {
-    rising_edge_start_4 = micros();
-  }
-  else if(trigger == 0) {
-    channel_4_raw = micros() - rising_edge_start_4;
-  }
-}
+// void getCh4() {
+//   int trigger = digitalRead(ch4Pin);
+//   if(trigger == 1) {
+//     rising_edge_start_4 = micros();
+//   }
+//   else if(trigger == 0) {
+//     channel_4_raw = micros() - rising_edge_start_4;
+//   }
+// }
 
-void getCh5() {
-  int trigger = digitalRead(ch5Pin);
-  if(trigger == 1) {
-    rising_edge_start_5 = micros();
-  }
-  else if(trigger == 0) {
-    channel_5_raw = micros() - rising_edge_start_5;
-  }
-}
+// void getCh5() {
+//   int trigger = digitalRead(ch5Pin);
+//   if(trigger == 1) {
+//     rising_edge_start_5 = micros();
+//   }
+//   else if(trigger == 0) {
+//     channel_5_raw = micros() - rising_edge_start_5;
+//   }
+// }
 
-void getCh6() {
-  int trigger = digitalRead(ch6Pin);
-  if(trigger == 1) {
-    rising_edge_start_6 = micros();
-  }
-  else if(trigger == 0) {
-    channel_6_raw = micros() - rising_edge_start_6;
-  }
-}
+// void getCh6() {
+//   int trigger = digitalRead(ch6Pin);
+//   if(trigger == 1) {
+//     rising_edge_start_6 = micros();
+//   }
+//   else if(trigger == 0) {
+//     channel_6_raw = micros() - rising_edge_start_6;
+//   }
+// }
 
 
 //========================================================================================================================//
@@ -1538,11 +1540,11 @@ void calibrateESCs() {
       
       servo1.write(s1_command_PWM); 
       servo2.write(s2_command_PWM);
-      servo3.write(s3_command_PWM);
-      servo4.write(s4_command_PWM);
-      servo5.write(s5_command_PWM);
-      servo6.write(s6_command_PWM);
-      servo7.write(s7_command_PWM);
+      //servo3.write(s3_command_PWM);
+      //servo4.write(s4_command_PWM);
+      //servo5.write(s5_command_PWM);
+      //servo6.write(s6_command_PWM);
+      //servo7.write(s7_command_PWM);
       commandMotors(); //Sends command pulses to each motor pin using OneShot125 protocol
       
       //printRadioData(); //Radio pwm values (expected: 1000 to 2000)
@@ -1853,11 +1855,11 @@ void setup() {
   pinMode(m4Pin, OUTPUT);
   servo1.attach(servo1Pin, 900, 2100); //Pin, min PWM value, max PWM value
   servo2.attach(servo2Pin, 900, 2100);
-  servo3.attach(servo3Pin, 900, 2100);
-  servo4.attach(servo4Pin, 900, 2100);
-  servo5.attach(servo5Pin, 900, 2100);
-  servo6.attach(servo6Pin, 900, 2100);
-  servo7.attach(servo7Pin, 900, 2100);
+  //servo3.attach(servo3Pin, 900, 2100);
+  //servo4.attach(servo4Pin, 900, 2100);
+  //servo5.attach(servo5Pin, 900, 2100);
+  //servo6.attach(servo6Pin, 900, 2100);
+  //servo7.attach(servo7Pin, 900, 2100);
 
   //Set built in LED to turn on to signal startup
   digitalWrite(13, HIGH);
@@ -1883,14 +1885,14 @@ void setup() {
   //Get IMU error to zero accelerometer and gyro readings, assuming vehicle is level when powered up
   //calculate_IMU_error(); //Calibration parameters printed to serial monitor. Paste these in the user specified variables section, then comment this out forever.
 
-  //Arm servo channels
+  //Arm servo channels TODO: Determine and set the default angle
   servo1.write(0); //Command servo angle from 0-180 degrees (1000 to 2000 PWM)
   servo2.write(0); //Set these to 90 for servos if you do not want them to briefly max out on startup
-  servo3.write(0); //Keep these at 0 if you are using servo outputs for motors
-  servo4.write(0);
-  servo5.write(0);
-  servo6.write(0);
-  servo7.write(0);
+  //servo3.write(0); //Keep these at 0 if you are using servo outputs for motors
+  //servo4.write(0);
+  //servo5.write(0);
+  //servo6.write(0);
+  //servo7.write(0);
   
   delay(5);
 
@@ -1964,11 +1966,11 @@ void loop() {
   commandMotors(); //Sends command pulses to each motor pin using OneShot125 protocol
   servo1.write(s1_command_PWM); //Writes PWM value to servo object
   servo2.write(s2_command_PWM);
-  servo3.write(s3_command_PWM);
-  servo4.write(s4_command_PWM);
-  servo5.write(s5_command_PWM);
-  servo6.write(s6_command_PWM);
-  servo7.write(s7_command_PWM);
+  //servo3.write(s3_command_PWM);
+  //servo4.write(s4_command_PWM);
+  //servo5.write(s5_command_PWM);
+  //servo6.write(s6_command_PWM);
+  //servo7.write(s7_command_PWM);
     
   //Get vehicle commands for next loop iteration
   getCommands(); //Pulls current available radio commands
