@@ -82,7 +82,7 @@ static const uint8_t num_DSM_channels = 6; //If using DSM RX, change this to mat
 
 #if defined USE_MPU6050_I2C
   #include "MPU6050.h"
-  MPU6050 mpu6050;
+  MPU6050 mpu6050(0x68, &Wire1);
 #elif defined USE_MPU9250_SPI
   #include "MPU9250.h"
   MPU9250 mpu9250(SPI2,36);
@@ -662,8 +662,8 @@ void IMUinit() {
    * Don't worry about how this works.
    */
   #if defined USE_MPU6050_I2C
-    Wire.begin();
-    Wire.setClock(1000000); //Note this is 2.5 times the spec sheet 400 kHz max...
+    Wire1.begin();
+    Wire1.setClock(1000000); //Note this is 2.5 times the spec sheet 400 kHz max...
     
     mpu6050.initialize();
     
