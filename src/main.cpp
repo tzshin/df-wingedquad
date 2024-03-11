@@ -1455,32 +1455,32 @@ void commandMotors() {
   int flagM4 = 0;
   
   //Write all motor pins high
-  digitalWrite(m1Pin, HIGH);
-  digitalWrite(m2Pin, HIGH);
-  digitalWrite(m3Pin, HIGH);
-  digitalWrite(m4Pin, HIGH);
+  digitalWriteFast(m1Pin, HIGH);
+  digitalWriteFast(m2Pin, HIGH);
+  digitalWriteFast(m3Pin, HIGH);
+  digitalWriteFast(m4Pin, HIGH);
   pulseStart = micros();
 
   //Write each motor pin low as correct pulse length is reached
   while (wentLow < 4 ) { //Keep going until final (4th) pulse is finished, then done
     timer = micros();
     if ((m1_command_PWM <= timer - pulseStart) && (flagM1==0)) {
-      digitalWrite(m1Pin, LOW);
+      digitalWriteFast(m1Pin, LOW);
       wentLow = wentLow + 1;
       flagM1 = 1;
     }
     if ((m2_command_PWM <= timer - pulseStart) && (flagM2==0)) {
-      digitalWrite(m2Pin, LOW);
+      digitalWriteFast(m2Pin, LOW);
       wentLow = wentLow + 1;
       flagM2 = 1;
     }
     if ((m3_command_PWM <= timer - pulseStart) && (flagM3==0)) {
-      digitalWrite(m3Pin, LOW);
+      digitalWriteFast(m3Pin, LOW);
       wentLow = wentLow + 1;
       flagM3 = 1;
     }
     if ((m4_command_PWM <= timer - pulseStart) && (flagM4==0)) {
-      digitalWrite(m4Pin, LOW);
+      digitalWriteFast(m4Pin, LOW);
       wentLow = wentLow + 1;
       flagM4 = 1;
     }
