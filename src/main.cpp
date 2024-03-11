@@ -155,7 +155,7 @@ unsigned long channel_1_fs = 1000; //thro
 unsigned long channel_2_fs = 1500; //ail
 unsigned long channel_3_fs = 1500; //elev
 unsigned long channel_4_fs = 1500; //rudd
-unsigned long channel_5_fs = 2000; //gear, greater than 1500 = throttle cut
+unsigned long channel_5_fs = 1000; //gear, smaller than 1500 = throttle cut (modified to comply with ELRS convention)
 unsigned long channel_6_fs = 2000; //aux1
 #if defined USE_CRSF_RX
   unsigned long channel_7_fs = 2000; //aux2
@@ -650,7 +650,7 @@ void controlMixer() {
 
 void armedStatus() {
   //DESCRIPTION: Check if the throttle cut is off and the throttle input is low to prepare for flight.
-  if ((channel_5_pwm < 1500) && (channel_1_pwm < 1050)) {
+  if ((channel_5_pwm > 1500) && (channel_1_pwm < 1050)) { // Modified to ARM_AUX > 1500 to comply with ELRS convention
     armedFly = true;
   }
 }
@@ -1626,10 +1626,11 @@ void throttleCut() {
       called before commandMotors() is called so that the last thing checked is if the user is giving permission to command
       the motors to anything other than minimum value. Safety first.
 
-      channel_5_pwm is LOW then throttle cut is OFF and throttle value can change. (ThrottleCut is DEACTIVATED)
-      channel_5_pwm is HIGH then throttle cut is ON and throttle value = 120 only. (ThrottleCut is ACTIVATED), (drone is DISARMED)
+      Complying with ELRS safety convention.
+        channel_5_pwm is HIGH then throttle cut is OFF and throttle value can change. (ThrottleCut is DEACTIVATED)
+        channel_5_pwm is LOW then throttle cut is ON and throttle value = 120 only. (ThrottleCut is ACTIVATED), (drone is DISARMED)
   */
-  if ((channel_5_pwm > 1500) || (armedFly == false)) {
+  if ((channel_5_pwm < 1500) || (armedFly == false)) { 
     armedFly = false;
     m1_command_PWM = 120;
     m2_command_PWM = 120;
