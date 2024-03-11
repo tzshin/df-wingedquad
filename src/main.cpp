@@ -645,7 +645,6 @@ void controlMixer() {
   s5_command_scaled = 0;
   s6_command_scaled = 0;
   s7_command_scaled = 0;
- 
 }
 
 void armedStatus() {
@@ -1442,7 +1441,6 @@ void failSafe() {
   #endif
 }
 
-// FIXME: Reduce motor count to 4
 void commandMotors() {
   //DESCRIPTION: Send pulses to motor pins, oneshot125 protocol
   /*
@@ -1710,7 +1708,14 @@ void printRadioData() {
     Serial.print(F(" CH5:"));
     Serial.print(channel_5_pwm);
     Serial.print(F(" CH6:"));
-    Serial.println(channel_6_pwm);
+    Serial.print(channel_6_pwm);
+    #if defined USE_CRSF_RX
+      Serial.print(F(" CH7:"));
+      Serial.print(channel_7_pwm);
+      Serial.print(F(" CH8:"));
+      Serial.print(channel_8_pwm);
+    #endif
+    Serial.println();
   }
 }
 
