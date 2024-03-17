@@ -63,6 +63,20 @@ Everyone that sends me pictures and videos of your flying creations! -Nick
 //  + |  +-+  | +   | GND | 
 //  + +--+-+--+ +   +-----+ 
 // 
+//
+//   -->      <--
+//  +---+    +---+ 
+//  | 4 |    | 2 | 
+//  +---+    +---+ 
+//       \  / 
+//       /  \ 
+//  +---+    +---+ 
+//  | 3 |    | 1 | 
+//  +---+    +---+
+//   -->      <--
+// 
+//  - Prop-in
+//  - Motors are ordered in Betaflight convention
 
 //========================================================================================================================//
 
@@ -712,19 +726,19 @@ void controlMixer()
    * roll_passthru, pitch_passthru, and yaw_passthu. mX_command_scaled and sX_command scaled variables are used in scaleCommands()
    * in preparation to be sent to the motor ESCs and servos.
    *
-   *Relevant variables:
-   *thro_des - direct thottle control
-   *roll_PID, pitch_PID, yaw_PID - stabilized axis variables
-   *roll_passthru, pitch_passthru, yaw_passthru - direct unstabilized command passthrough
-   *channel_6_pwm - free auxillary channel, can be used to toggle things with an 'if' statement
+   * Relevant variables:
+   * thro_des - direct thottle control
+   * roll_PID, pitch_PID, yaw_PID - stabilized axis variables
+   * roll_passthru, pitch_passthru, yaw_passthru - direct unstabilized command passthrough
+   * channel_6_pwm - free auxillary channel, can be used to toggle things with an 'if' statement
    */
 
-  // Quad mixing - EXAMPLE
-  m1_command_scaled = thro_des - pitch_PID + roll_PID + yaw_PID; // Front Left
+  m1_command_scaled = thro_des + pitch_PID - roll_PID + yaw_PID; // Back Right
   m2_command_scaled = thro_des - pitch_PID - roll_PID - yaw_PID; // Front Right
-  m3_command_scaled = thro_des + pitch_PID - roll_PID + yaw_PID; // Back Right
-  m4_command_scaled = thro_des + pitch_PID + roll_PID - yaw_PID; // Back Left
+  m3_command_scaled = thro_des + pitch_PID + roll_PID - yaw_PID; // Back Left
+  m4_command_scaled = thro_des - pitch_PID + roll_PID + yaw_PID; // Front Left
 
+  // FIXME: Make this work
   // 0.5 is centered servo, 0.0 is zero throttle if connecting to ESC for conventional PWM, 1.0 is max throttle
   s1_command_scaled = 0;
   s2_command_scaled = 0;
