@@ -8,7 +8,7 @@
 
 // CREDITS + SPECIAL THANKS
 /*
-Some elements inspired by:
+Some elements inspi red by:
 http://www.brokking.net/ymfc-32_main.html
 
 Madgwick filter function adapted from:
@@ -34,16 +34,35 @@ Everyone that sends me pictures and videos of your flying creations! -Nick
 // IMU_SCL  16 |         | 09  #SVO_FPV
 // IMU_SDA  17 |         | 08  
 //          18 |         | 07  
-//          19 |         | 06  #SVO_PAN
-//   RX_TX  20 |         | 05  #SVO_TLT
-//   RX_RX  21 |         | 04  M3
+//          19 |   TOP   | 06  #SVO_PAN
+//  RX_FTX  20 |         | 05  #SVO_TLT
+//  RX_FRX  21 |         | 04  M3
 //      M2  22 |         | 03  M4
 //      M1  23 |         | 02  BEPR
-//         3v3 |  +---+  | 01  
+//         3V3 |  +---+  | 01  
 //         GND |  |   |  | 00  
 //         Vin +--+---+--+ GND 
 //
 // "#"s are project specific pin config
+// 
+// 
+//  + +-------+ +   +-----+ RX
+//  + |       | +   | GND | 
+//  + |       | +   |  5V |       MOTOR
+//  + |       | +   | FRX |      +-----+ 
+//  + |       | +   | FTX |      | N/A | 
+//  + |       | +   +-----+      |  VB | 
+//  + |       | +   +-----+ IMU  |  M1 | 
+//  + |  TOP  | +   | 3V3 |      |  M2 | 
+//  + |       | +   | GND |      |  M3 | 
+//  + |       | +   | SCL |      |  M4 | 
+//  + |       | +   | SDA |      | CUR | 
+//  + |       | +   +-----+      | N/A | 
+//  + |       | +   +-----+ PWR  +-----+
+//  + |       | +   | BAT | 
+//  + |  +-+  | +   | GND | 
+//  + +--+-+--+ +   +-----+ 
+// 
 
 //========================================================================================================================//
 
