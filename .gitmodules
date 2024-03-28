@@ -1,0 +1,3 @@
+[submodule "lib/CRSFforArduino"]
+	path = lib/CRSFforArduino
+	url = https://github.com/tzshin/CRSFforArduino.git

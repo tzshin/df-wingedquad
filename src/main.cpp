@@ -8,7 +8,7 @@
 
 // CREDITS + SPECIAL THANKS
 /*
-Some elements inspi red by:
+Some elements inspired by:
 http://www.brokking.net/ymfc-32_main.html
 
 Madgwick filter function adapted from:
@@ -64,19 +64,22 @@ Everyone that sends me pictures and videos of your flying creations! -Nick
 //  + +--+-+--+ +   +-----+ 
 // 
 //
-//   -->      <--
-//  +---+    +---+ 
-//  | 4 |    | 2 | 
-//  +---+    +---+ 
-//       \  / 
-//       /  \ 
-//  +---+    +---+ 
-//  | 3 |    | 1 | 
-//  +---+    +---+
-//   -->      <--
+//                 -->      <--
+//                +---+    +---+ 
+//                | 4 |    | 2 | 
+//       X        +---+    +---+ 
+//       ^             |--| 
+//       |             |--|        ^ FORWARD
+//  Y <--O             |--|        |
+//                     |--| 
+// Z point up     +---+    +---+ 
+//                | 3 |    | 1 | 
+//                +---+    +---+
+//                 -->      <--
 // 
 //  - Prop-in
 //  - Motors are ordered in Betaflight convention
+//  - PID controllers are NOT in FPV drones' convention (Z reversed)
 
 //========================================================================================================================//
 
@@ -267,6 +270,9 @@ float Kd_yaw = 0.00015; // Yaw D-gain (be careful when increasing too high, moto
 
 // TODO: Some variable here
 
+const int ffcamAngleFpv = 30;
+const int ffcamAngleFix = 90;
+
 
 //========================================================================================================================//
 //                                                     DECLARE PINS                                                       //
@@ -335,6 +341,9 @@ bool sbusLostFrame;
 #if defined USE_DSM_RX
 DSM1024 DSM;
 #endif
+#if defined USE_CRSF_RX
+uint16_t crsfChannels[16];
+#endif
 
 // IMU:
 float AccX, AccY, AccZ;
@@ -384,6 +393,9 @@ unsigned long time_ms = 0;
 //========================================================================================================================//
 
 void radioSetup();
+#if defined USE_CRSF_RX
+void onReceiveCrsfChannels(serialReceiverLayer::rcChannels_t *rcData);
+#endif
 #if not defined USE_CRSF_RX
 unsigned long getRadioPWM(int ch_num);
 void serialEvent3(void);
@@ -438,11 +450,16 @@ void radioSetup()
   Serial3.begin(115000);
 
 #elif defined USE_CRSF_RX
-  crsf = new CRSFforArduino();
-  if (!crsf->begin())
+  crsf = new CRSFforArduino(&Serial5);
+  if (crsf->begin() == true)
+  {
+    /* CRSF for Arduino initialised successfully.
+    We can now register the RC Channels event. */
+    crsf->setRcChannelsCallback(onReceiveCrsfChannels);
+  }
+  else
   {
     crsf->end();
-
     delete crsf;
     crsf = nullptr;
 
@@ -456,6 +473,37 @@ void radioSetup()
   // #error No RX type defined...
 #endif
 }
+
+#if defined USE_CRSF_RX
+void onReceiveCrsfChannels(serialReceiverLayer::rcChannels_t *rcData)
+{
+  // crsfChannels[0] = crsf->rcToUs(crsf->getChannel(1));
+  // crsfChannels[1] = crsf->rcToUs(crsf->getChannel(2));
+  // crsfChannels[2] = crsf->rcToUs(crsf->getChannel(3));
+  // crsfChannels[3] = crsf->rcToUs(crsf->getChannel(4));
+  // crsfChannels[4] = crsf->rcToUs(crsf->getChannel(5));
+  // crsfChannels[5] = crsf->rcToUs(crsf->getChannel(6));
+  // crsfChannels[6] = crsf->rcToUs(crsf->getChannel(7));
+  // crsfChannels[7] = crsf->rcToUs(crsf->getChannel(8));
+
+  crsfChannels[0] = crsf->rcToUs(rcData->value[0]);
+  crsfChannels[1] = crsf->rcToUs(rcData->value[1]);
+  crsfChannels[2] = crsf->rcToUs(rcData->value[2]);
+  crsfChannels[3] = crsf->rcToUs(rcData->value[3]);
+  crsfChannels[4] = crsf->rcToUs(rcData->value[4]);
+  crsfChannels[5] = crsf->rcToUs(rcData->value[5]);
+  crsfChannels[6] = crsf->rcToUs(rcData->value[6]);
+  crsfChannels[7] = crsf->rcToUs(rcData->value[7]);
+
+  // for (int i = 0; i < 8; i++)
+  // {
+  //   Serial.print(">");
+  //   Serial.print(i);
+  //   Serial.print(": ");
+  //   Serial.println(crsf->rcToUs(rcData->value[i]));
+  // }
+}
+#endif
 
 #if not defined USE_CRSF_RX
 unsigned long getRadioPWM(int ch_num)
@@ -491,7 +539,8 @@ unsigned long getRadioPWM(int ch_num)
   return returnPWM;
 }
 
-For DSM type receivers void serialEvent3(void)
+// For DSM type receivers
+void serialEvent3(void)
 {
 #if defined USE_DSM_RX
   while (Serial3.available())
@@ -504,7 +553,7 @@ For DSM type receivers void serialEvent3(void)
 
 // INTERRUPT SERVICE ROUTINES (for reading PWM and PPM)
 
-#if not defined USE_CRSF_RX
+#if defined USE_PPM_RX or USE_PWM_RX
 void getPPM()
 {
   unsigned long dt_ppm;
@@ -752,10 +801,27 @@ void controlMixer()
 void armedStatus()
 {
   // DESCRIPTION: Check if the throttle cut is off and the throttle input is low to prepare for flight.
-  if ((channel_5_pwm > 1500) && (channel_1_pwm < 1050))
-  { // Modified to ARM_AUX > 1500 to comply with ELRS convention
+  if ((channel_5_pwm > 1500) && (channel_3_pwm < 1050)) // Modified to ARM_AUX > 1500 to comply with ELRS convention
+  {
     armedFly = true;
   }
+
+  // static unsigned long up_time = 0;
+
+  // if (channel_3_pwm > 1050)
+  // {
+  //   if (up_time == 0)
+  //   {
+  //     up_time = micros();
+  //   }
+  //   else if (micros() - up_time > 800000)
+  //   {
+  //     armedFly = false;
+  //   }
+  // }
+  // else {
+  //   up_time = 0;
+  // }
 }
 
 void IMUinit()
@@ -1189,9 +1255,9 @@ void getDesState()
    * (rate mode). yaw_des is scaled to be within max yaw in degrees/sec. Also creates roll_passthru, pitch_passthru, and
    * yaw_passthru variables, to be used in commanding motors/servos with direct unstabilized commands in controlMixer().
    */
-  thro_des = (channel_1_pwm - 1000.0) / 1000.0; // Between 0 and 1
-  roll_des = (channel_2_pwm - 1500.0) / 500.0;  // Between -1 and 1
-  pitch_des = (channel_3_pwm - 1500.0) / 500.0; // Between -1 and 1
+  thro_des = (channel_3_pwm - 1000.0) / 1000.0; // Between 0 and 1
+  roll_des = (channel_1_pwm - 1500.0) / 500.0;  // Between -1 and 1
+  pitch_des = (channel_2_pwm - 1500.0) / 500.0; // Between -1 and 1
   yaw_des = (channel_4_pwm - 1500.0) / 500.0;   // Between -1 and 1
   roll_passthru = roll_des / 2.0;               // Between -0.5 and 0.5
   pitch_passthru = pitch_des / 2.0;             // Between -0.5 and 0.5
@@ -1499,14 +1565,14 @@ void getCommands()
   {
     crsf->update();
 
-    channel_1_pwm = crsf->rcToUs(crsf->getChannel(1));
-    channel_2_pwm = crsf->rcToUs(crsf->getChannel(2));
-    channel_3_pwm = crsf->rcToUs(crsf->getChannel(3));
-    channel_4_pwm = crsf->rcToUs(crsf->getChannel(4));
-    channel_5_pwm = crsf->rcToUs(crsf->getChannel(5));
-    channel_6_pwm = crsf->rcToUs(crsf->getChannel(6));
-    channel_7_pwm = crsf->rcToUs(crsf->getChannel(7));
-    channel_8_pwm = crsf->rcToUs(crsf->getChannel(8));
+    channel_1_pwm = crsfChannels[0];
+    channel_2_pwm = crsfChannels[1];
+    channel_3_pwm = crsfChannels[2];
+    channel_4_pwm = crsfChannels[3];
+    channel_5_pwm = crsfChannels[4];
+    channel_6_pwm = crsfChannels[5];
+    channel_7_pwm = crsfChannels[6];
+    channel_8_pwm = crsfChannels[7];
   }
 #endif
 
@@ -2034,7 +2100,7 @@ void printLoopRate()
 void setup()
 {
   Serial.begin(576000); // USB serial
-  while (!Serial) {} // Making sure the serial monitor is connected while debugging
+  // while (!Serial) {} // Making sure the serial monitor is connected while debugging
   delay(500);
 
   // Initialize all pins
@@ -2044,7 +2110,7 @@ void setup()
   pinMode(m3Pin, OUTPUT);
   pinMode(m4Pin, OUTPUT);
   servo1.attach(servo1Pin, 900, 2100); // Pin, min PWM value, max PWM value
-  servo2.attach(servo2Pin, 900, 2100);
+  servo2.attach(servo2Pin, 900, 2100); // TODO: Need to extend the PWM range for wing actuating servo to achieve the full range of motion
   servo3.attach(servo3Pin, 900, 2100);
   servo4.attach(servo4Pin, 900, 2100);
   // servo5.attach(servo5Pin, 900, 2100);
@@ -2124,7 +2190,7 @@ void loop()
   // printMagData();       //Prints filtered magnetometer data direct from IMU (expected: ~ -300 to 300)
   // printRollPitchYaw();  //Prints roll, pitch, and yaw angles in degrees from Madgwick filter (expected: degrees, 0 when level)
   // printPIDoutput();     //Prints computed stabilized PID variables from controller and desired setpoint (expected: ~ -1 to 1)
-  // printMotorCommands(); //Prints the values being written to the motors (expected: 120 to 250)
+  printMotorCommands(); //Prints the values being written to the motors (expected: 120 to 250)
   // printServoCommands(); //Prints the values being written to the servos (expected: 0 to 180)
   // printLoopRate();      //Prints the time between loops in microseconds (expected: microseconds between loop iterations)
 
@@ -2139,9 +2205,9 @@ void loop()
   getDesState(); // Convert raw commands to normalized values based on saturated control limits
 
   // PID Controller - SELECT ONE:
-  controlANGLE(); // Stabilize on angle setpoint
+  // controlANGLE(); // Stabilize on angle setpoint
   // controlANGLE2(); //Stabilize on angle setpoint using cascaded method. Rate controller must be tuned well first!
-  // controlRATE(); //Stabilize on rate setpoint
+  controlRATE(); //Stabilize on rate setpoint
 
   // Actuator mixing and scaling to PWM values
   controlMixer();  // Mixes PID outputs to scaled actuator commands -- custom mixing assignments done here
