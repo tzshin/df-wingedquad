@@ -1,3 +1,6 @@
 [submodule "lib/CRSFforArduino"]
 	path = lib/CRSFforArduino
 	url = https://github.com/tzshin/CRSFforArduino.git
+[submodule "lib/TinyGPSPlus"]
+	path = lib/TinyGPSPlus
+	url = https://github.com/mikalhart/TinyGPSPlus.git

@@ -268,10 +268,13 @@ float Kd_yaw = 0.00015; // Yaw D-gain (be careful when increasing too high, moto
 
 // WINGEDQUAD SPECIFIC VARIABLES
 
-// TODO: Some variable here
+// TODO: Some variables here
 
 const int ffcamAngleFpv = 30;
 const int ffcamAngleFix = 90;
+
+const float batVolConvFactor = 3.3 / 1024.0 * (1.0 / 1.0);  // FIXME: Check the specific resistors on PCB
+const float batCurConvFactor = 3.3 / 1024.0 / 0.04; // Default 40 mV per A for FPV 4-in-1 ESC
 
 
 //========================================================================================================================//
@@ -315,7 +318,18 @@ PWMServo servo4;
 
 //========================================================================================================================//
 
-// DECLARE GLOBAL VARIABLES
+// WINGEDQUAD SPECIFIC PINS
+
+// TODO: Some pins here
+
+const int batVolPin = 14;
+const int batCurPin = 15;
+
+const int buzzerPin = 2;
+
+//========================================================================================================================//
+//                                                   GLOBAL VARIABLES                                                     //
+//========================================================================================================================//
 
 // General stuff
 float dt;
@@ -477,15 +491,6 @@ void radioSetup()
 #if defined USE_CRSF_RX
 void onReceiveCrsfChannels(serialReceiverLayer::rcChannels_t *rcData)
 {
-  // crsfChannels[0] = crsf->rcToUs(crsf->getChannel(1));
-  // crsfChannels[1] = crsf->rcToUs(crsf->getChannel(2));
-  // crsfChannels[2] = crsf->rcToUs(crsf->getChannel(3));
-  // crsfChannels[3] = crsf->rcToUs(crsf->getChannel(4));
-  // crsfChannels[4] = crsf->rcToUs(crsf->getChannel(5));
-  // crsfChannels[5] = crsf->rcToUs(crsf->getChannel(6));
-  // crsfChannels[6] = crsf->rcToUs(crsf->getChannel(7));
-  // crsfChannels[7] = crsf->rcToUs(crsf->getChannel(8));
-
   crsfChannels[0] = crsf->rcToUs(rcData->value[0]);
   crsfChannels[1] = crsf->rcToUs(rcData->value[1]);
   crsfChannels[2] = crsf->rcToUs(rcData->value[2]);
@@ -494,14 +499,20 @@ void onReceiveCrsfChannels(serialReceiverLayer::rcChannels_t *rcData)
   crsfChannels[5] = crsf->rcToUs(rcData->value[5]);
   crsfChannels[6] = crsf->rcToUs(rcData->value[6]);
   crsfChannels[7] = crsf->rcToUs(rcData->value[7]);
+}
+#endif
 
-  // for (int i = 0; i < 8; i++)
-  // {
-  //   Serial.print(">");
-  //   Serial.print(i);
-  //   Serial.print(": ");
-  //   Serial.println(crsf->rcToUs(rcData->value[i]));
-  // }
+#if defined USE_CRSF_RX
+void handleCrsfTelemetry() {
+  static unsigned long long last_telem_update = millis();
+  if (millis() - last_telem_update > 200) {  // Update telemetry data at 20 Hz
+    last_telem_update = millis();
+
+    int voltage = static_cast<int>(static_cast<float>(analogRead(batVolPin)) * batVolConvFactor);;
+    int current = static_cast<int>(static_cast<float>(analogRead(batCurPin)) * batCurConvFactor);;
+
+    crsf->telemetryWriteBattery(voltage, current, 0, 0);
+  }
 }
 #endif
 
@@ -1933,6 +1944,15 @@ void calibrateMagnetometer()
     ; // Halt code so it won't enter main loop until this function commented out
 }
 
+void handleBuzzer() {
+  if (channel_6_pwm > 1500) {
+    digitalWrite(buzzerPin, HIGH);
+  }
+  else {
+    digitalWrite(buzzerPin, LOW);
+  }
+}
+
 void printRadioData()
 {
   if (current_time - print_counter > 10000)
@@ -2117,6 +2137,12 @@ void setup()
   // servo6.attach(servo6Pin, 900, 2100);
   // servo7.attach(servo7Pin, 900, 2100);
 
+  pinMode(batVolPin, INPUT);
+  pinMode(batCurPin, INPUT);
+  pinMode(buzzerPin, OUTPUT);
+  
+  digitalWrite(buzzerPin, LOW);
+
   // Set built in LED to turn on to signal startup
   digitalWrite(13, HIGH);
 
@@ -2229,6 +2255,9 @@ void loop()
   // Get vehicle commands for next loop iteration
   getCommands(); // Pulls current available radio commands
   failSafe();    // Prevent failures in event of bad receiver connection, defaults to failsafe values assigned in setup
+
+  handleCrsfTelemetry();
+
 
   // Regulate loop rate
   loopRate(2000); // Do not exceed 2000Hz, all filter parameters tuned to 2000Hz by default
