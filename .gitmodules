@@ -4,3 +4,6 @@
 [submodule "lib/TinyGPSPlus"]
 	path = lib/TinyGPSPlus
 	url = https://github.com/mikalhart/TinyGPSPlus.git
+[submodule "lib/TFMini-Plus"]
+	path = lib/TFMini-Plus
+	url = https://github.com/budryerson/TFMini-Plus.git
