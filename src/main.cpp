@@ -80,6 +80,12 @@ Everyone that sends me pictures and videos of your flying creations! -Nick
 //  - Prop-in
 //  - Motors are ordered in Betaflight convention
 //  - PID controllers are NOT in FPV drones' convention (Z reversed)
+// 
+// RC channel order (in rc hobbist's convention):
+// - channel 1: Aileron
+// - channel 2: Elevator
+// - channel 3: Throttle
+// - channel 4: Rudder
 
 //========================================================================================================================//
 
@@ -119,6 +125,8 @@ Everyone that sends me pictures and videos of your flying creations! -Nick
 #include <Wire.h>     // I2c communication
 #include <SPI.h>      // SPI communication
 #include <PWMServo.h> // Commanding any extra actuators, installed with teensyduino installer
+
+#include <TinyGPSPlus.h> // GPS
 
 #if defined USE_SBUS_RX
 #include "SBUS.h" // sBus interface
@@ -197,18 +205,18 @@ MPU9250 mpu9250(SPI2, 36);
 //========================================================================================================================//
 
 // Radio failsafe values for every channel in the event that bad reciever data is detected. Recommended defaults:
-unsigned long channel_1_fs = 1000; // thro
-unsigned long channel_2_fs = 1500; // ail
-unsigned long channel_3_fs = 1500; // elev
-unsigned long channel_4_fs = 1500; // rudd
-unsigned long channel_5_fs = 1000; // gear, smaller than 1500 = throttle cut (modified to comply with ELRS convention)
-unsigned long channel_6_fs = 2000; // aux1 (flying mode, 1: Quad, 2: Mixed, 3: Wing)
+unsigned long channel_1_fs = 1500; // Aileron
+unsigned long channel_2_fs = 1500; // Elevator
+unsigned long channel_3_fs = 1000; // Throttle
+unsigned long channel_4_fs = 1500; // Rudder
+unsigned long channel_5_fs = 1000; // Gear, smaller than 1500 = throttle cut (modified to comply with ELRS convention)
+unsigned long channel_6_fs = 2000; // Aux1 (flying mode, 1: Quad, 2: Mixed, 3: Wing)
 #if defined USE_CRSF_RX
-unsigned long channel_7_fs = 1500; // aux2 (observer gimbal pan-axis)
-unsigned long channel_8_fs = 1500; // aux3 (observer gimbal tilt-axis)
+unsigned long channel_7_fs = 1500; // Aux2 (observer gimbal pan-axis)
+unsigned long channel_8_fs = 1500; // Aux3 (observer gimbal tilt-axis)
 #endif
 
-const int servo1Default = 90; // Default servo position (deg)
+const int servo1Default = 125; // Default servo position (deg)
 const int servo2Default = 90; // TODO: Determine the default poses
 const int servo3Default = 90;
 const int servo4Default = 90;
@@ -231,12 +239,12 @@ float MagScaleY = 1.0;
 float MagScaleZ = 1.0;
 
 // IMU calibration parameters - calibrate IMU using calculate_IMU_error() in the void setup() to get these values, then comment out calculate_IMU_error()
-float AccErrorX = 0.0;
-float AccErrorY = -0.01;
-float AccErrorZ = 0.07;
-float GyroErrorX = 5.1;
-float GyroErrorY = -0.93;
-float GyroErrorZ = 0.19;
+float AccErrorX = -0.02; 
+float AccErrorY = -0.02; 
+float AccErrorZ = 0.13;  
+float GyroErrorX = -2.58;
+float GyroErrorY = -0.74;
+float GyroErrorZ = 3.77;
 
 // Controller parameters (take note of defaults before modifying!):
 float i_limit = 25.0;  // Integrator saturation level, mostly for safety (default 25.0)
@@ -270,6 +278,10 @@ float Kd_yaw = 0.00015; // Yaw D-gain (be careful when increasing too high, moto
 
 // TODO: Some variables here
 
+static const int SerialGpsBaud = 9600;
+static const int SerialAirportBaud = 4800;
+
+const float wingAngleOffset = (35.0 / 180.0) * 1.0;
 const int ffcamAngleFpv = 30;
 const int ffcamAngleFix = 90;
 
@@ -301,10 +313,10 @@ const int m3Pin = 4;
 const int m4Pin = 3;
 
 // PWM servo or ESC outputs:
-const int servo1Pin = 10; // Wing rotating
-const int servo2Pin = 9;  // FPV camera angle changing
-const int servo3Pin = 6;  // Observer gimbal pan-axis
-const int servo4Pin = 5;  // Observer gimbal tilt_axis
+const int servo1Pin = 18; // Wing rotating
+const int servo2Pin = 19; // FPV camera angle changing
+const int servo3Pin = 5;  // Observer gimbal pan-axis
+const int servo4Pin = 6;  // Observer gimbal tilt_axis
 // const int servo5Pin = 0;
 // const int servo6Pin = 0;
 // const int servo7Pin = 0;
@@ -401,6 +413,17 @@ unsigned long channel_7_raw, channel_8_raw;
 #endif
 int ppm_counter = 0;
 unsigned long time_ms = 0;
+
+//========================================================================================================================//
+
+// WINGEDQUAD SPECIFIC GLOBAL VARIABLES
+
+// TODO: Some global variables here
+
+HardwareSerial& SerialGps =     Serial1;
+HardwareSerial& SerialAirport = Serial7;
+
+TinyGPSPlus gps;
 
 //========================================================================================================================//
 //                                                       FORWARD                                                          //
@@ -798,15 +821,25 @@ void controlMixer()
   m3_command_scaled = thro_des + pitch_PID + roll_PID - yaw_PID; // Back Left
   m4_command_scaled = thro_des - pitch_PID + roll_PID + yaw_PID; // Front Left
 
-  // FIXME: Make this work
   // 0.5 is centered servo, 0.0 is zero throttle if connecting to ESC for conventional PWM, 1.0 is max throttle
-  s1_command_scaled = 0;
-  s2_command_scaled = 0;
-  s3_command_scaled = 0;
-  s4_command_scaled = 0;
-  s5_command_scaled = 0;
-  s6_command_scaled = 0;
-  s7_command_scaled = 0;
+  if (channel_6_pwm < 1050) {
+    s1_command_scaled = 0.5 - (pitch_IMU / 180.0) + wingAngleOffset;
+    s2_command_scaled = (ffcamAngleFpv / 180.0);
+    s3_command_scaled = (servo3Default / 180.0);
+    s4_command_scaled = (servo4Default / 180.0);
+  }
+  else if (channel_6_pwm > 1450 && channel_6_pwm < 1550) {
+    s1_command_scaled = 0.5 - ((pitch_IMU + 6.0) / 180.0) + wingAngleOffset;
+    s2_command_scaled = (ffcamAngleFpv / 180.0);
+    s3_command_scaled = (servo3Default / 180.0);
+    s4_command_scaled = (servo4Default / 180.0);
+  }
+  else if (channel_6_pwm > 1950) {
+    s1_command_scaled = wingAngleOffset;
+    s2_command_scaled = (ffcamAngleFix / 180.0);
+    s3_command_scaled = (servo3Default / 180.0);
+    s4_command_scaled = (servo4Default / 180.0);
+  }
 }
 
 void armedStatus()
@@ -1301,7 +1334,7 @@ void controlANGLE()
   // Roll
   error_roll = roll_des - roll_IMU;
   integral_roll = integral_roll_prev + error_roll * dt;
-  if (channel_1_pwm < 1060)
+  if (channel_3_pwm < 1060)
   { // Don't let integrator build if throttle is too low
     integral_roll = 0;
   }
@@ -1312,7 +1345,7 @@ void controlANGLE()
   // Pitch
   error_pitch = pitch_des - pitch_IMU;
   integral_pitch = integral_pitch_prev + error_pitch * dt;
-  if (channel_1_pwm < 1060)
+  if (channel_3_pwm < 1060)
   { // Don't let integrator build if throttle is too low
     integral_pitch = 0;
   }
@@ -1323,7 +1356,7 @@ void controlANGLE()
   // Yaw, stablize on rate from GyroZ
   error_yaw = yaw_des - GyroZ;
   integral_yaw = integral_yaw_prev + error_yaw * dt;
-  if (channel_1_pwm < 1060)
+  if (channel_3_pwm < 1060)
   { // Don't let integrator build if throttle is too low
     integral_yaw = 0;
   }
@@ -1352,7 +1385,7 @@ void controlANGLE2()
   // Roll
   error_roll = roll_des - roll_IMU;
   integral_roll_ol = integral_roll_prev_ol + error_roll * dt;
-  if (channel_1_pwm < 1060)
+  if (channel_3_pwm < 1060)
   { // Don't let integrator build if throttle is too low
     integral_roll_ol = 0;
   }
@@ -1363,7 +1396,7 @@ void controlANGLE2()
   // Pitch
   error_pitch = pitch_des - pitch_IMU;
   integral_pitch_ol = integral_pitch_prev_ol + error_pitch * dt;
-  if (channel_1_pwm < 1060)
+  if (channel_3_pwm < 1060)
   { // Don't let integrator build if throttle is too low
     integral_pitch_ol = 0;
   }
@@ -1384,7 +1417,7 @@ void controlANGLE2()
   // Roll
   error_roll = roll_des_ol - GyroX;
   integral_roll_il = integral_roll_prev_il + error_roll * dt;
-  if (channel_1_pwm < 1060)
+  if (channel_3_pwm < 1060)
   { // Don't let integrator build if throttle is too low
     integral_roll_il = 0;
   }
@@ -1395,7 +1428,7 @@ void controlANGLE2()
   // Pitch
   error_pitch = pitch_des_ol - GyroY;
   integral_pitch_il = integral_pitch_prev_il + error_pitch * dt;
-  if (channel_1_pwm < 1060)
+  if (channel_3_pwm < 1060)
   { // Don't let integrator build if throttle is too low
     integral_pitch_il = 0;
   }
@@ -1406,7 +1439,7 @@ void controlANGLE2()
   // Yaw
   error_yaw = yaw_des - GyroZ;
   integral_yaw = integral_yaw_prev + error_yaw * dt;
-  if (channel_1_pwm < 1060)
+  if (channel_3_pwm < 1060)
   { // Don't let integrator build if throttle is too low
     integral_yaw = 0;
   }
@@ -1440,7 +1473,7 @@ void controlRATE()
   // Roll
   error_roll = roll_des - GyroX;
   integral_roll = integral_roll_prev + error_roll * dt;
-  if (channel_1_pwm < 1060)
+  if (channel_3_pwm < 1060)
   { // Don't let integrator build if throttle is too low
     integral_roll = 0;
   }
@@ -1451,7 +1484,7 @@ void controlRATE()
   // Pitch
   error_pitch = pitch_des - GyroY;
   integral_pitch = integral_pitch_prev + error_pitch * dt;
-  if (channel_1_pwm < 1060)
+  if (channel_3_pwm < 1060)
   { // Don't let integrator build if throttle is too low
     integral_pitch = 0;
   }
@@ -1462,7 +1495,7 @@ void controlRATE()
   // Yaw, stablize on rate from GyroZ
   error_yaw = yaw_des - GyroZ;
   integral_yaw = integral_yaw_prev + error_yaw * dt;
-  if (channel_1_pwm < 1060)
+  if (channel_3_pwm < 1060)
   { // Don't let integrator build if throttle is too low
     integral_yaw = 0;
   }
@@ -1953,6 +1986,12 @@ void handleBuzzer() {
   }
 }
 
+void handleGps() {
+  while (SerialGps.available()) {
+    gps.encode(SerialGps.read());
+  }
+}
+
 void printRadioData()
 {
   if (current_time - print_counter > 10000)
@@ -2121,6 +2160,8 @@ void setup()
 {
   Serial.begin(576000); // USB serial
   // while (!Serial) {} // Making sure the serial monitor is connected while debugging
+  SerialAirport.begin(SerialAirportBaud);
+  SerialGps.begin(SerialGpsBaud);
   delay(500);
 
   // Initialize all pins
@@ -2129,10 +2170,10 @@ void setup()
   pinMode(m2Pin, OUTPUT);
   pinMode(m3Pin, OUTPUT);
   pinMode(m4Pin, OUTPUT);
-  servo1.attach(servo1Pin, 900, 2100); // Pin, min PWM value, max PWM value
-  servo2.attach(servo2Pin, 900, 2100); // TODO: Need to extend the PWM range for wing actuating servo to achieve the full range of motion
-  servo3.attach(servo3Pin, 900, 2100);
-  servo4.attach(servo4Pin, 900, 2100);
+  servo1.attach(servo1Pin, 500, 2500); // Pin, min PWM value, max PWM value
+  servo2.attach(servo2Pin, 500, 2500); // TODO: Need to extend the PWM range for wing actuating servo to achieve the full range of motion
+  servo3.attach(servo3Pin, 500, 2500);
+  servo4.attach(servo4Pin, 500, 2500);
   // servo5.attach(servo5Pin, 900, 2100);
   // servo6.attach(servo6Pin, 900, 2100);
   // servo7.attach(servo7Pin, 900, 2100);
@@ -2140,7 +2181,7 @@ void setup()
   pinMode(batVolPin, INPUT);
   pinMode(batCurPin, INPUT);
   pinMode(buzzerPin, OUTPUT);
-  
+
   digitalWrite(buzzerPin, LOW);
 
   // Set built in LED to turn on to signal startup
@@ -2216,7 +2257,7 @@ void loop()
   // printMagData();       //Prints filtered magnetometer data direct from IMU (expected: ~ -300 to 300)
   // printRollPitchYaw();  //Prints roll, pitch, and yaw angles in degrees from Madgwick filter (expected: degrees, 0 when level)
   // printPIDoutput();     //Prints computed stabilized PID variables from controller and desired setpoint (expected: ~ -1 to 1)
-  printMotorCommands(); //Prints the values being written to the motors (expected: 120 to 250)
+  // printMotorCommands(); //Prints the values being written to the motors (expected: 120 to 250)
   // printServoCommands(); //Prints the values being written to the servos (expected: 0 to 180)
   // printLoopRate();      //Prints the time between loops in microseconds (expected: microseconds between loop iterations)
 
@@ -2257,7 +2298,8 @@ void loop()
   failSafe();    // Prevent failures in event of bad receiver connection, defaults to failsafe values assigned in setup
 
   handleCrsfTelemetry();
-
+  handleBuzzer();
+  handleGps();
 
   // Regulate loop rate
   loopRate(2000); // Do not exceed 2000Hz, all filter parameters tuned to 2000Hz by default
