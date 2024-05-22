@@ -27,60 +27,60 @@ Everyone that sends me pictures and videos of your flying creations! -Nick
 
 // Pinout for TZ's FC v1
 // With Teensy 4.0
-// 
+//
 //  SD_SCK  13 +---------+ 12  SD_MISO
 //    VBAT  14 |         | 11  SD_MOSI
 //     CUR  15 |         | 10  #SVO_WNG
 // IMU_SCL  16 |         | 09  #SVO_FPV
-// IMU_SDA  17 |         | 08  
-//          18 |         | 07  
+// IMU_SDA  17 |         | 08
+//          18 |         | 07
 //          19 |   TOP   | 06  #SVO_PAN
 //  RX_FTX  20 |         | 05  #SVO_TLT
 //  RX_FRX  21 |         | 04  M3
 //      M2  22 |         | 03  M4
 //      M1  23 |         | 02  BEPR
-//         3V3 |  +---+  | 01  
-//         GND |  |   |  | 00  
-//         Vin +--+---+--+ GND 
+//         3V3 |  +---+  | 01
+//         GND |  |   |  | 00
+//         Vin +--+---+--+ GND
 //
 // "#"s are project specific pin config
-// 
-// 
+//
+//
 //  + +-------+ +   +-----+ RX
-//  + |       | +   | GND | 
+//  + |       | +   | GND |
 //  + |       | +   |  5V |       MOTOR
-//  + |       | +   | FRX |      +-----+ 
-//  + |       | +   | FTX |      | N/A | 
-//  + |       | +   +-----+      |  VB | 
-//  + |       | +   +-----+ IMU  |  M1 | 
-//  + |  TOP  | +   | 3V3 |      |  M2 | 
-//  + |       | +   | GND |      |  M3 | 
-//  + |       | +   | SCL |      |  M4 | 
-//  + |       | +   | SDA |      | CUR | 
-//  + |       | +   +-----+      | N/A | 
+//  + |       | +   | FRX |      +-----+
+//  + |       | +   | FTX |      | N/A |
+//  + |       | +   +-----+      |  VB |
+//  + |       | +   +-----+ IMU  |  M1 |
+//  + |  TOP  | +   | 3V3 |      |  M2 |
+//  + |       | +   | GND |      |  M3 |
+//  + |       | +   | SCL |      |  M4 |
+//  + |       | +   | SDA |      | CUR |
+//  + |       | +   +-----+      | N/A |
 //  + |       | +   +-----+ PWR  +-----+
-//  + |       | +   | BAT | 
-//  + |  +-+  | +   | GND | 
-//  + +--+-+--+ +   +-----+ 
-// 
+//  + |       | +   | BAT |
+//  + |  +-+  | +   | GND |
+//  + +--+-+--+ +   +-----+
+//
 //
 //                 -->      <--
-//                +---+    +---+ 
-//                | 4 |    | 2 | 
-//       X        +---+    +---+ 
-//       ^             |--| 
+//                +---+    +---+
+//                | 4 |    | 2 |
+//       X        +---+    +---+
+//       ^             |--|
 //       |             |--|        ^ FORWARD
 //  Y <--O             |--|        |
-//                     |--| 
-// Z point up     +---+    +---+ 
-//                | 3 |    | 1 | 
+//                     |--|
+// Z point up     +---+    +---+
+//                | 3 |    | 1 |
 //                +---+    +---+
 //                 -->      <--
-// 
+//
 //  - Prop-in
 //  - Motors are ordered in Betaflight convention
 //  - PID controllers are NOT in FPV drones' convention (Z reversed)
-// 
+//
 // RC channel order (in rc hobbist's convention):
 // - channel 1: Aileron
 // - channel 2: Elevator
@@ -221,7 +221,7 @@ unsigned long channel_8_fs = 1500; // Aux3 (observer gimbal tilt-axis)
 #endif
 
 const int servo1Default = 125; // Default servo position (deg)
-const int servo2Default = 90; // TODO: Determine the default poses
+const int servo2Default = 90;  // TODO: Determine the default poses
 const int servo3Default = 90;
 const int servo4Default = 90;
 // const int servo5Default = 90;
@@ -243,9 +243,9 @@ float MagScaleY = 1.0;
 float MagScaleZ = 1.0;
 
 // IMU calibration parameters - calibrate IMU using calculate_IMU_error() in the void setup() to get these values, then comment out calculate_IMU_error()
-float AccErrorX = 0.10;  
-float AccErrorY = 0.00;  
-float AccErrorZ = 0.13;  
+float AccErrorX = 0.10;
+float AccErrorY = 0.00;
+float AccErrorZ = 0.13;
 float GyroErrorX = -2.54;
 float GyroErrorY = -0.78;
 float GyroErrorZ = 3.89;
@@ -256,14 +256,14 @@ float maxRoll = 30.0;  // Max roll angle in degrees for angle mode (maximum ~70 
 float maxPitch = 30.0; // Max pitch angle in degrees for angle mode (maximum ~70 degrees), deg/sec for rate mode
 float maxYaw = 160.0;  // Max yaw rate in deg/sec
 
-float Kp_roll_angle = 0.0;   // Roll P-gain - angle mode
-float Ki_roll_angle = 0.0;   // Roll I-gain - angle mode
-float Kd_roll_angle = 0.0;   // Roll D-gain - angle mode (has no effect on controlANGLE2)
-float B_loop_roll = 0.9;     // Roll damping term for controlANGLE2(), lower is more damping (must be between 0 to 1)
-float Kp_pitch_angle = 0.0;  // Pitch P-gain - angle mode
-float Ki_pitch_angle = 0.0;  // Pitch I-gain - angle mode
-float Kd_pitch_angle = 0.0;  // Pitch D-gain - angle mode (has no effect on controlANGLE2)
-float B_loop_pitch = 0.9;    // Pitch damping term for controlANGLE2(), lower is more damping (must be between 0 to 1)
+float Kp_roll_angle = 0.0;  // Roll P-gain - angle mode
+float Ki_roll_angle = 0.0;  // Roll I-gain - angle mode
+float Kd_roll_angle = 0.0;  // Roll D-gain - angle mode (has no effect on controlANGLE2)
+float B_loop_roll = 0.9;    // Roll damping term for controlANGLE2(), lower is more damping (must be between 0 to 1)
+float Kp_pitch_angle = 0.0; // Pitch P-gain - angle mode
+float Ki_pitch_angle = 0.0; // Pitch I-gain - angle mode
+float Kd_pitch_angle = 0.0; // Pitch D-gain - angle mode (has no effect on controlANGLE2)
+float B_loop_pitch = 0.9;   // Pitch damping term for controlANGLE2(), lower is more damping (must be between 0 to 1)
 
 float Kp_roll_rate = 0.15;    // Roll P-gain - rate mode
 float Ki_roll_rate = 0.2;     // Roll I-gain - rate mode
@@ -289,8 +289,8 @@ const float wingAngleOffset = (35.0 / 180.0) * 1.0;
 const int ffcamAngleFpv = 30;
 const int ffcamAngleFix = 90;
 
-const float batVolConvFactor = 3.3 / 1024.0 * (1.0 / 1.0);  // FIXME: Check the specific resistors on PCB
-const float batCurConvFactor = 3.3 / 1024.0 / 0.04; // Default 40 mV per A for FPV 4-in-1 ESC
+const float batVolConvFactor = 3.3 / 1024.0 * (1.0 / 1.0); // FIXME: Check the specific resistors on PCB
+const float batCurConvFactor = 3.3 / 1024.0 / 0.04;        // Default 40 mV per A for FPV 4-in-1 ESC
 
 const float Kp_roll_quad = 0.2;
 const float Ki_roll_quad = 0.3;
@@ -311,6 +311,7 @@ const float Kd_pitch_fixed = 0.025;
 const float Kp_yaw_fixed = 0.3;
 const float Ki_yaw_fixed = 0.05;
 const float Kd_yaw_fixed = 0.00015;
+const int MinTiltAngle = 0;
 
 //========================================================================================================================//
 //                                                     DECLARE PINS                                                       //
@@ -443,10 +444,10 @@ unsigned long time_ms = 0;
 
 // TODO: Some global variables here
 
-int flight_mode = 0;  // [0, 1, 2, 3] for [take-off-landing, quadcopter, mixed, fixed-wing]
+int flight_mode = 0; // [0, 1, 2, 3] for [take-off-landing, quadcopter, mixed, fixed-wing]
 
-HardwareSerial& SerialGps =     Serial1;
-HardwareSerial& SerialAirport = Serial7;
+HardwareSerial &SerialGps = Serial1;
+HardwareSerial &SerialAirport = Serial7;
 
 TinyGPSPlus gps;
 
@@ -551,13 +552,17 @@ void onReceiveCrsfChannels(serialReceiverLayer::rcChannels_t *rcData)
 #endif
 
 #if defined USE_CRSF_RX
-void handleCrsfTelemetry() {
+void handleCrsfTelemetry()
+{
   static unsigned long long last_telem_update = millis();
-  if (millis() - last_telem_update > 200) {  // Update telemetry data at 20 Hz
+  if (millis() - last_telem_update > 200)
+  { // Update telemetry data at 20 Hz
     last_telem_update = millis();
 
-    int voltage = static_cast<int>(static_cast<float>(analogRead(batVolPin)) * batVolConvFactor);;
-    int current = static_cast<int>(static_cast<float>(analogRead(batCurPin)) * batCurConvFactor);;
+    int voltage = static_cast<int>(static_cast<float>(analogRead(batVolPin)) * batVolConvFactor);
+    ;
+    int current = static_cast<int>(static_cast<float>(analogRead(batCurPin)) * batCurConvFactor);
+    ;
 
     crsf->telemetryWriteBattery(voltage, current, 0, 0);
   }
@@ -914,11 +919,13 @@ void controlMixer()
    */
 
   static float quad_blend_factor = 0.0;
-  if (flight_mode != 3) {
+  if (flight_mode != 3)
+  {
     // In quadcopter-based flight mode, fade the quad proportion to 1.0
     quad_blend_factor = floatFaderLinear(quad_blend_factor, 0.0, 1.0, 1.5, 1, 2000);
   }
-  else {
+  else
+  {
     // In fixed-wing-based flight mode, fade the quad proportion to 0.0
     quad_blend_factor = floatFaderLinear(quad_blend_factor, 0.0, 1.0, 3.0, 0, 2000);
   }
@@ -933,24 +940,30 @@ void controlMixer()
   m4_command_scaled += (1 - quad_blend_factor) * (thro_des - pitch_PID - roll_PID - yaw_PID);
 
   // 0.5 is centered servo, 0.0 is zero throttle if connecting to ESC for conventional PWM, 1.0 is max throttle
-  if (flight_mode == 0 || flight_mode == 1) {
+  if (flight_mode == 0 || flight_mode == 1)
+  {
     s1_command_scaled = 0.5 - (pitch_IMU / 180.0) + wingAngleOffset;
     s2_command_scaled = (ffcamAngleFpv / 180.0);
-    s3_command_scaled = (servo3Default / 180.0);
-    s4_command_scaled = (servo4Default / 180.0);
   }
-  else if (flight_mode == 2) {
+  else if (flight_mode == 2)
+  {
     s1_command_scaled = 0.5 - ((pitch_IMU + 8.0) / 180.0) + wingAngleOffset;
     s2_command_scaled = (ffcamAngleFpv / 180.0);
-    s3_command_scaled = (servo3Default / 180.0);
-    s4_command_scaled = (servo4Default / 180.0);
   }
-  else if (flight_mode == 3) {
+  else if (flight_mode == 3)
+  {
     s1_command_scaled = wingAngleOffset;
     s2_command_scaled = (ffcamAngleFix / 180.0);
-    s3_command_scaled = (servo3Default / 180.0);
-    s4_command_scaled = (servo4Default / 180.0);
   }
+}
+
+void handleGimbal()
+{
+  int pan_velocity; // deg/s
+  pan_velocity = map(channel_7_pwm, 1000, 2000, -60, 60);
+  s3_command_scaled += (pan_velocity * dt) / 180.0;
+  s3_command_scaled = constrain(s3_command_scaled, 0, 1);
+  s4_command_scaled = float(map(channel_8_pwm, 1000, 2000, MinTiltAngle, 180)) / 180;
 }
 
 void armedStatus()
@@ -1100,22 +1113,24 @@ void getIMUdata()
   MagZ_prev = MagZ;
 }
 
-void _rotate_2d(float* x, float* y, float theta) {
-    float x_hold = *x;
-    float y_hold = *y;
-    
-    *x = x_hold * cos(theta) - y_hold * sin(theta);
-    *y = x_hold * sin(theta) + y_hold * cos(theta);
+void _rotate_2d(float *x, float *y, float theta)
+{
+  float x_hold = *x;
+  float y_hold = *y;
+
+  *x = x_hold * cos(theta) - y_hold * sin(theta);
+  *y = x_hold * sin(theta) + y_hold * cos(theta);
 }
 
-void rotateIMUreference() {
+void rotateIMUreference()
+{
   // Rotate the IMU data to change the attitude reference for difference flight mode
-  constexpr float transition_time_f2q = 1.5; // Transition time from fixed-wing-mode to quadcopter-mode
-  constexpr float transition_time_q2f = 3.0; // Transition time from quadcopter-mode to fixed-wing-mode
+  constexpr float transition_time_f2q = 1.5;       // Transition time from fixed-wing-mode to quadcopter-mode
+  constexpr float transition_time_q2f = 3.0;       // Transition time from quadcopter-mode to fixed-wing-mode
   constexpr float fade_start = -90.0 * pi / 180.0; // Target IMU offset
   constexpr float fade_end = 0.0;
-  constexpr float gyro_rot_offset_f2q = (fade_end-fade_start) / transition_time_f2q / pi * 180.0;  // In deg/s
-  constexpr float gyro_rot_offset_q2f = -(fade_end-fade_start) / transition_time_q2f / pi * 180.0; // In deg/s
+  constexpr float gyro_rot_offset_f2q = (fade_end - fade_start) / transition_time_f2q / pi * 180.0;  // In deg/s
+  constexpr float gyro_rot_offset_q2f = -(fade_end - fade_start) / transition_time_q2f / pi * 180.0; // In deg/s
 
   static float pitch_offset = 0.0; // Pitch offset holder in radian
   static int flight_mode_prev = 0;
@@ -1124,16 +1139,20 @@ void rotateIMUreference() {
   static unsigned long rot_start_ts = 0;
   static unsigned long rot_earlyexit_comp = 0;
 
-  if (flight_mode != 3) {
+  if (flight_mode != 3)
+  {
     // Quadcopter mode: fade pitch offset to 0
     pitch_offset = floatFaderLinear(pitch_offset, fade_start, fade_end, transition_time_f2q, 1, 2000);
 
-    if (flight_mode_prev == 3) {
+    if (flight_mode_prev == 3)
+    {
       // Transition from fixed-wing to quadcopter
-      if (is_rot_finished) {
+      if (is_rot_finished)
+      {
         rot_earlyexit_comp = 0;
       }
-      else {
+      else
+      {
         float scaling = transition_time_f2q / transition_time_q2f;
         rot_earlyexit_comp = ((transition_time_q2f * s_to_millis) - (millis() - rot_start_ts)) * scaling;
       }
@@ -1142,23 +1161,30 @@ void rotateIMUreference() {
       rot_start_ts = millis() - rot_earlyexit_comp;
     }
 
-    if (is_rotating) {
+    if (is_rotating)
+    {
       GyroY += gyro_rot_offset_f2q;
-      if (millis() - rot_start_ts > transition_time_f2q * s_to_millis) {
+      if (millis() - rot_start_ts > transition_time_f2q * s_to_millis)
+      {
         is_rotating = false;
         is_rot_finished = true;
       }
     }
-  } else {
+  }
+  else
+  {
     // Fixed-wing mode: fade pitch offset to -pi/2
     pitch_offset = floatFaderLinear(pitch_offset, fade_start, fade_end, transition_time_q2f, 0, 2000);
 
-    if (flight_mode_prev != 3) {
+    if (flight_mode_prev != 3)
+    {
       // Transition from quadcopter to fixed-wing
-      if (is_rot_finished) {
+      if (is_rot_finished)
+      {
         rot_earlyexit_comp = 0;
       }
-      else {
+      else
+      {
         float scaling = transition_time_q2f / transition_time_f2q;
         rot_earlyexit_comp = ((transition_time_f2q * s_to_millis) - (millis() - rot_start_ts)) * scaling;
       }
@@ -1167,9 +1193,11 @@ void rotateIMUreference() {
       rot_start_ts = millis() - rot_earlyexit_comp;
     }
 
-    if (is_rotating) {
+    if (is_rotating)
+    {
       GyroY += gyro_rot_offset_q2f;
-      if (millis() - rot_start_ts > transition_time_q2f * s_to_millis) {
+      if (millis() - rot_start_ts > transition_time_q2f * s_to_millis)
+      {
         is_rotating = false;
         is_rot_finished = true;
       }
@@ -1525,13 +1553,16 @@ void getDesState()
   yaw_passthru = constrain(yaw_passthru, -0.5, 0.5);
 }
 
-void blendPID() {
+void blendPID()
+{
   static float quad_blend_factor = 0.0;
-  if (flight_mode != 3) {
+  if (flight_mode != 3)
+  {
     // In quadcopter-based flight mode, fade the quad proportion to 1.0
     quad_blend_factor = floatFaderLinear(quad_blend_factor, 0.0, 1.0, 1.5, 1, 2000);
   }
-  else {
+  else
+  {
     // In fixed-wing-based flight mode, fade the quad proportion to 0.0
     quad_blend_factor = floatFaderLinear(quad_blend_factor, 0.0, 1.0, 3.0, 0, 2000);
   }
@@ -2137,32 +2168,42 @@ void calibrateMagnetometer()
     ; // Halt code so it won't enter main loop until this function commented out
 }
 
-void setFlightMode() {
-  if (channel_6_pwm > 900 && channel_6_pwm < 1100) {
+void setFlightMode()
+{
+  if (channel_6_pwm > 900 && channel_6_pwm < 1100)
+  {
     flight_mode = 0;
   }
-  else if (channel_6_pwm > 1200 && channel_6_pwm < 1400) {
+  else if (channel_6_pwm > 1200 && channel_6_pwm < 1400)
+  {
     flight_mode = 1;
   }
-  else if (channel_6_pwm > 1600 && channel_6_pwm < 1800) {
+  else if (channel_6_pwm > 1600 && channel_6_pwm < 1800)
+  {
     flight_mode = 2;
   }
-  else if (channel_6_pwm > 1900 && channel_6_pwm < 2100) {
+  else if (channel_6_pwm > 1900 && channel_6_pwm < 2100)
+  {
     flight_mode = 3;
   }
 }
 
-void handleBuzzer() {
-  if (channel_6_pwm > 1500) {
+void handleBuzzer()
+{
+  if (channel_6_pwm > 1500)
+  {
     digitalWrite(buzzerPin, HIGH);
   }
-  else {
+  else
+  {
     digitalWrite(buzzerPin, LOW);
   }
 }
 
-void handleGps() {
-  while (SerialGps.available()) {
+void handleGps()
+{
+  while (SerialGps.available())
+  {
     gps.encode(SerialGps.read());
   }
 }
@@ -2440,8 +2481,8 @@ void loop()
   armedStatus(); // Check if the throttle cut is off and throttle is low.
 
   // Get vehicle state
-  getIMUdata(); // Pulls raw gyro, accelerometer, and magnetometer data from IMU and LP filters to remove noise
-  rotateIMUreference(); // Rotate the IMU data to change the attitude reference for difference flight mode
+  getIMUdata();                                                              // Pulls raw gyro, accelerometer, and magnetometer data from IMU and LP filters to remove noise
+  rotateIMUreference();                                                      // Rotate the IMU data to change the attitude reference for difference flight mode
   Madgwick(GyroX, -GyroY, -GyroZ, -AccX, AccY, AccZ, MagY, -MagX, MagZ, dt); // Updates roll_IMU, pitch_IMU, and yaw_IMU angle estimates (degrees)
 
   // Alter the attitude reference for different flight mode
@@ -2457,19 +2498,23 @@ void loop()
   // controlANGLE2(); //Stabilize on angle setpoint using cascaded method. Rate controller must be tuned well first!
   // controlRATE(); //Stabilize on rate setpoint
 
-  // Actuator mixing and scaling to PWM values
-  controlMixer();  // Mixes PID outputs to scaled actuator commands -- custom mixing assignments done here
+  // Actuator mixing
+  controlMixer(); // Mixes PID outputs to scaled actuator commands -- custom mixing assignments done here
+
+  // Gimbal
+  handleGimbal();
+
+  // scaling to PWM values
   scaleCommands(); // Scales motor commands to 125 to 250 range (oneshot125 protocol) and servo PWM commands to 0 to 180 (for servo library)
 
   // Throttle cut check
   throttleCut(); // Directly sets motor commands to low based on state of ch5
-
   // Command actuators
   commandMotors();              // Sends command pulses to each motor pin using OneShot125 protocol
   servo1.write(s1_command_PWM); // Writes PWM value to servo object
   servo2.write(s2_command_PWM);
-  servo3.write(s3_command_PWM);
-  servo4.write(s4_command_PWM);
+  servo3.write(s3_command_PWM); // gimbal pan
+  servo4.write(s4_command_PWM); // gimbal tilt
   // servo5.write(s5_command_PWM);
   // servo6.write(s6_command_PWM);
   // servo7.write(s7_command_PWM);
