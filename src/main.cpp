@@ -282,15 +282,15 @@ float Kd_yaw = 0.0; // Yaw D-gain (be careful when increasing too high, motors w
 
 // TODO: Some variables here
 
-static const int SerialGpsBaud = 9600;
-static const int SerialAirportBaud = 4800;
+constexpr int SerialGpsBaud = 9600;
+constexpr int SerialAirportBaud = 4800;
 
-const float wingAngleOffset = (35.0 / 180.0) * 1.0;
-const int ffcamAngleFpv = 30;
-const int ffcamAngleFix = 90;
+constexpr float wingAngleOffset = (35.0 / 180.0) * 1.0;
+constexpr int ffcamAngleFpv = 30;
+constexpr int ffcamAngleFix = 90;
 
-const float batVolConvFactor = 3.3 / 1024.0 * (1.0 / 1.0);  // FIXME: Check the specific resistors on PCB
-const float batCurConvFactor = 3.3 / 1024.0 / 0.04; // Default 40 mV per A for FPV 4-in-1 ESC
+constexpr float batVolConvFactor = 3.3 / 1024.0 * 9.1097;  // Check the specific resistors on PCB
+constexpr float batCurConvFactor = 3.3 / 1024.0 / 0.04; // Default 40 mV per A for FPV 4-in-1 ESC
 
 const float Kp_roll_quad = 0.2;
 const float Ki_roll_quad = 0.3;
@@ -553,11 +553,11 @@ void onReceiveCrsfChannels(serialReceiverLayer::rcChannels_t *rcData)
 #if defined USE_CRSF_RX
 void handleCrsfTelemetry() {
   static unsigned long long last_telem_update = millis();
-  if (millis() - last_telem_update > 200) {  // Update telemetry data at 20 Hz
+  if (millis() - last_telem_update > 50) {  // Update telemetry data at 20 Hz
     last_telem_update = millis();
 
-    int voltage = static_cast<int>(static_cast<float>(analogRead(batVolPin)) * batVolConvFactor);;
-    int current = static_cast<int>(static_cast<float>(analogRead(batCurPin)) * batCurConvFactor);;
+    float voltage = static_cast<float>(analogRead(batVolPin)) * batVolConvFactor * 100.0;
+    float current = static_cast<float>(analogRead(batCurPin)) * batCurConvFactor * 10.0;
 
     crsf->telemetryWriteBattery(voltage, current, 0, 0);
   }
