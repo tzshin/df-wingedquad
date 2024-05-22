@@ -91,6 +91,10 @@ Everyone that sends me pictures and videos of your flying creations! -Nick
 
 #include <Arduino.h>
 
+constexpr int s_to_millis = 1000;
+constexpr int s_to_micros = 1000000;
+constexpr int pi = 3.14159265359;
+
 //========================================================================================================================//
 //                                                 USER-SPECIFIED DEFINES                                                 //
 //========================================================================================================================//
@@ -210,7 +214,7 @@ unsigned long channel_2_fs = 1500; // Elevator
 unsigned long channel_3_fs = 1000; // Throttle
 unsigned long channel_4_fs = 1500; // Rudder
 unsigned long channel_5_fs = 1000; // Gear, smaller than 1500 = throttle cut (modified to comply with ELRS convention)
-unsigned long channel_6_fs = 2000; // Aux1 (flying mode, 1: Quad, 2: Mixed, 3: Wing)
+unsigned long channel_6_fs = 1000; // Aux1 (flying mode, 1: Quad, 2: Mixed, 3: Wing)
 #if defined USE_CRSF_RX
 unsigned long channel_7_fs = 1500; // Aux2 (observer gimbal pan-axis)
 unsigned long channel_8_fs = 1500; // Aux3 (observer gimbal tilt-axis)
@@ -239,12 +243,12 @@ float MagScaleY = 1.0;
 float MagScaleZ = 1.0;
 
 // IMU calibration parameters - calibrate IMU using calculate_IMU_error() in the void setup() to get these values, then comment out calculate_IMU_error()
-float AccErrorX = -0.02; 
-float AccErrorY = -0.02; 
+float AccErrorX = 0.10;  
+float AccErrorY = 0.00;  
 float AccErrorZ = 0.13;  
-float GyroErrorX = -2.58;
-float GyroErrorY = -0.74;
-float GyroErrorZ = 3.77;
+float GyroErrorX = -2.54;
+float GyroErrorY = -0.78;
+float GyroErrorZ = 3.89;
 
 // Controller parameters (take note of defaults before modifying!):
 float i_limit = 25.0;  // Integrator saturation level, mostly for safety (default 25.0)
@@ -252,13 +256,13 @@ float maxRoll = 30.0;  // Max roll angle in degrees for angle mode (maximum ~70 
 float maxPitch = 30.0; // Max pitch angle in degrees for angle mode (maximum ~70 degrees), deg/sec for rate mode
 float maxYaw = 160.0;  // Max yaw rate in deg/sec
 
-float Kp_roll_angle = 0.2;   // Roll P-gain - angle mode
-float Ki_roll_angle = 0.3;   // Roll I-gain - angle mode
-float Kd_roll_angle = 0.05;  // Roll D-gain - angle mode (has no effect on controlANGLE2)
+float Kp_roll_angle = 0.0;   // Roll P-gain - angle mode
+float Ki_roll_angle = 0.0;   // Roll I-gain - angle mode
+float Kd_roll_angle = 0.0;   // Roll D-gain - angle mode (has no effect on controlANGLE2)
 float B_loop_roll = 0.9;     // Roll damping term for controlANGLE2(), lower is more damping (must be between 0 to 1)
-float Kp_pitch_angle = 0.2;  // Pitch P-gain - angle mode
-float Ki_pitch_angle = 0.3;  // Pitch I-gain - angle mode
-float Kd_pitch_angle = 0.05; // Pitch D-gain - angle mode (has no effect on controlANGLE2)
+float Kp_pitch_angle = 0.0;  // Pitch P-gain - angle mode
+float Ki_pitch_angle = 0.0;  // Pitch I-gain - angle mode
+float Kd_pitch_angle = 0.0;  // Pitch D-gain - angle mode (has no effect on controlANGLE2)
 float B_loop_pitch = 0.9;    // Pitch damping term for controlANGLE2(), lower is more damping (must be between 0 to 1)
 
 float Kp_roll_rate = 0.15;    // Roll P-gain - rate mode
@@ -268,9 +272,9 @@ float Kp_pitch_rate = 0.15;   // Pitch P-gain - rate mode
 float Ki_pitch_rate = 0.2;    // Pitch I-gain - rate mode
 float Kd_pitch_rate = 0.0002; // Pitch D-gain - rate mode (be careful when increasing too high, motors will begin to overheat!)
 
-float Kp_yaw = 0.3;     // Yaw P-gain
-float Ki_yaw = 0.05;    // Yaw I-gain
-float Kd_yaw = 0.00015; // Yaw D-gain (be careful when increasing too high, motors will begin to overheat!)
+float Kp_yaw = 0.0; // Yaw P-gain
+float Ki_yaw = 0.0; // Yaw I-gain
+float Kd_yaw = 0.0; // Yaw D-gain (be careful when increasing too high, motors will begin to overheat!)
 
 //========================================================================================================================//
 
@@ -288,6 +292,25 @@ const int ffcamAngleFix = 90;
 const float batVolConvFactor = 3.3 / 1024.0 * (1.0 / 1.0);  // FIXME: Check the specific resistors on PCB
 const float batCurConvFactor = 3.3 / 1024.0 / 0.04; // Default 40 mV per A for FPV 4-in-1 ESC
 
+const float Kp_roll_quad = 0.2;
+const float Ki_roll_quad = 0.3;
+const float Kd_roll_quad = 0.05;
+const float Kp_pitch_quad = 0.2;
+const float Ki_pitch_quad = 0.3;
+const float Kd_pitch_quad = 0.05;
+const float Kp_yaw_quad = 0.3;
+const float Ki_yaw_quad = 0.05;
+const float Kd_yaw_quad = 0.00015;
+
+const float Kp_roll_fixed = 0.1;
+const float Ki_roll_fixed = 0.15;
+const float Kd_roll_fixed = 0.025;
+const float Kp_pitch_fixed = 0.1;
+const float Ki_pitch_fixed = 0.15;
+const float Kd_pitch_fixed = 0.025;
+const float Kp_yaw_fixed = 0.3;
+const float Ki_yaw_fixed = 0.05;
+const float Kd_yaw_fixed = 0.00015;
 
 //========================================================================================================================//
 //                                                     DECLARE PINS                                                       //
@@ -419,6 +442,8 @@ unsigned long time_ms = 0;
 // WINGEDQUAD SPECIFIC GLOBAL VARIABLES
 
 // TODO: Some global variables here
+
+int flight_mode = 0;  // [0, 1, 2, 3] for [take-off-landing, quadcopter, mixed, fixed-wing]
 
 HardwareSerial& SerialGps =     Serial1;
 HardwareSerial& SerialAirport = Serial7;
@@ -798,6 +823,78 @@ void setupBlink(int numBlinks, int upTime, int downTime)
   }
 }
 
+float floatFaderLinear(float param, float param_min, float param_max, float fadeTime, int state, int loopFreq)
+{
+  // DESCRIPTION: Linearly fades a float type variable between min and max bounds based on desired high or low state and time
+  /*
+   *  Takes in a float variable, desired minimum and maximum bounds, fade time, high or low desired state, and the loop frequency
+   *  and linearly interpolates that param variable between the maximum and minimum bounds. This function can be called in controlMixer()
+   *  and high/low states can be determined by monitoring the state of an auxillarly radio channel. For example, if channel_6_pwm is being
+   *  monitored to switch between two dynamic configurations (hover and forward flight), this function can be called within the logical
+   *  statements in order to fade controller gains, for example between the two dynamic configurations. The 'state' (1 or 0) can be used
+   *  to designate the two final options for that control gain based on the dynamic configuration assignment to the auxillary radio channel.
+   *
+   */
+  float diffParam = (param_max - param_min) / (fadeTime * loopFreq); // Difference to add or subtract from param for each loop iteration for desired fadeTime
+
+  if (state == 1)
+  { // Maximum param bound desired, increase param by diffParam for each loop iteration
+    param = param + diffParam;
+  }
+  else if (state == 0)
+  { // Minimum param bound desired, decrease param by diffParam for each loop iteration
+    param = param - diffParam;
+  }
+
+  param = constrain(param, param_min, param_max); // Constrain param within max bounds
+
+  return param;
+}
+
+float floatFaderLinear2(float param, float param_des, float param_lower, float param_upper, float fadeTime_up, float fadeTime_down, int loopFreq)
+{
+  // DESCRIPTION: Linearly fades a float type variable from its current value to the desired value, up or down
+  /*
+   *  Takes in a float variable to be modified, desired new position, upper value, lower value, fade time, and the loop frequency
+   *  and linearly fades that param variable up or down to the desired value. This function can be called in controlMixer()
+   *  to fade up or down between flight modes monitored by an auxillary radio channel. For example, if channel_6_pwm is being
+   *  monitored to switch between two dynamic configurations (hover and forward flight), this function can be called within the logical
+   *  statements in order to fade controller gains, for example between the two dynamic configurations.
+   *
+   */
+  if (param > param_des)
+  { // Need to fade down to get to desired
+    float diffParam = (param_upper - param_des) / (fadeTime_down * loopFreq);
+    param = param - diffParam;
+  }
+  else if (param < param_des)
+  { // Need to fade up to get to desired
+    float diffParam = (param_des - param_lower) / (fadeTime_up * loopFreq);
+    param = param + diffParam;
+  }
+
+  param = constrain(param, param_lower, param_upper); // Constrain param within max bounds
+
+  return param;
+}
+
+void switchRollYaw(int reverseRoll, int reverseYaw)
+{
+  // DESCRIPTION: Switches roll_des and yaw_des variables for tailsitter-type configurations
+  /*
+   * Takes in two integers (either 1 or -1) corresponding to the desired reversing of the roll axis and yaw axis, respectively.
+   * Reversing of the roll or yaw axis may be needed when switching between the two for some dynamic configurations. Inputs of 1, 1 does not
+   * reverse either of them, while -1, 1 will reverse the output corresponding to the new roll axis.
+   * This function may be replaced in the future by a function that switches the IMU data instead (so that angle can also be estimated with the
+   * IMU tilted 90 degrees from default level).
+   */
+  float switch_holder;
+
+  switch_holder = yaw_des;
+  yaw_des = reverseYaw * roll_des;
+  roll_des = reverseRoll * switch_holder;
+}
+
 void controlMixer()
 {
   // DESCRIPTION: Mixes scaled commands from PID controller to actuator outputs based on vehicle configuration
@@ -816,25 +913,39 @@ void controlMixer()
    * channel_6_pwm - free auxillary channel, can be used to toggle things with an 'if' statement
    */
 
-  m1_command_scaled = thro_des + pitch_PID - roll_PID + yaw_PID; // Back Right
-  m2_command_scaled = thro_des - pitch_PID - roll_PID - yaw_PID; // Front Right
-  m3_command_scaled = thro_des + pitch_PID + roll_PID - yaw_PID; // Back Left
-  m4_command_scaled = thro_des - pitch_PID + roll_PID + yaw_PID; // Front Left
+  static float quad_blend_factor = 0.0;
+  if (flight_mode != 3) {
+    // In quadcopter-based flight mode, fade the quad proportion to 1.0
+    quad_blend_factor = floatFaderLinear(quad_blend_factor, 0.0, 1.0, 1.5, 1, 2000);
+  }
+  else {
+    // In fixed-wing-based flight mode, fade the quad proportion to 0.0
+    quad_blend_factor = floatFaderLinear(quad_blend_factor, 0.0, 1.0, 3.0, 0, 2000);
+  }
+
+  m1_command_scaled = quad_blend_factor * (thro_des + pitch_PID - roll_PID + yaw_PID);
+  m2_command_scaled = quad_blend_factor * (thro_des - pitch_PID - roll_PID - yaw_PID);
+  m3_command_scaled = quad_blend_factor * (thro_des + pitch_PID + roll_PID - yaw_PID);
+  m4_command_scaled = quad_blend_factor * (thro_des - pitch_PID + roll_PID + yaw_PID);
+  m1_command_scaled += (1 - quad_blend_factor) * (thro_des + pitch_PID + roll_PID + yaw_PID);
+  m2_command_scaled += (1 - quad_blend_factor) * (thro_des - pitch_PID - roll_PID + yaw_PID);
+  m3_command_scaled += (1 - quad_blend_factor) * (thro_des + pitch_PID + roll_PID - yaw_PID);
+  m4_command_scaled += (1 - quad_blend_factor) * (thro_des - pitch_PID - roll_PID - yaw_PID);
 
   // 0.5 is centered servo, 0.0 is zero throttle if connecting to ESC for conventional PWM, 1.0 is max throttle
-  if (channel_6_pwm < 1050) {
+  if (flight_mode == 0 || flight_mode == 1) {
     s1_command_scaled = 0.5 - (pitch_IMU / 180.0) + wingAngleOffset;
     s2_command_scaled = (ffcamAngleFpv / 180.0);
     s3_command_scaled = (servo3Default / 180.0);
     s4_command_scaled = (servo4Default / 180.0);
   }
-  else if (channel_6_pwm > 1450 && channel_6_pwm < 1550) {
-    s1_command_scaled = 0.5 - ((pitch_IMU + 6.0) / 180.0) + wingAngleOffset;
+  else if (flight_mode == 2) {
+    s1_command_scaled = 0.5 - ((pitch_IMU + 8.0) / 180.0) + wingAngleOffset;
     s2_command_scaled = (ffcamAngleFpv / 180.0);
     s3_command_scaled = (servo3Default / 180.0);
     s4_command_scaled = (servo4Default / 180.0);
   }
-  else if (channel_6_pwm > 1950) {
+  else if (flight_mode == 3) {
     s1_command_scaled = wingAngleOffset;
     s2_command_scaled = (ffcamAngleFix / 180.0);
     s3_command_scaled = (servo3Default / 180.0);
@@ -987,6 +1098,89 @@ void getIMUdata()
   MagX_prev = MagX;
   MagY_prev = MagY;
   MagZ_prev = MagZ;
+}
+
+void _rotate_2d(float* x, float* y, float theta) {
+    float x_hold = *x;
+    float y_hold = *y;
+    
+    *x = x_hold * cos(theta) - y_hold * sin(theta);
+    *y = x_hold * sin(theta) + y_hold * cos(theta);
+}
+
+void rotateIMUreference() {
+  // Rotate the IMU data to change the attitude reference for difference flight mode
+  constexpr float transition_time_f2q = 1.5; // Transition time from fixed-wing-mode to quadcopter-mode
+  constexpr float transition_time_q2f = 3.0; // Transition time from quadcopter-mode to fixed-wing-mode
+  constexpr float fade_start = -90.0 * pi / 180.0; // Target IMU offset
+  constexpr float fade_end = 0.0;
+  constexpr float gyro_rot_offset_f2q = (fade_end-fade_start) / transition_time_f2q / pi * 180.0;  // In deg/s
+  constexpr float gyro_rot_offset_q2f = -(fade_end-fade_start) / transition_time_q2f / pi * 180.0; // In deg/s
+
+  static float pitch_offset = 0.0; // Pitch offset holder in radian
+  static int flight_mode_prev = 0;
+  static bool is_rotating = false;
+  static bool is_rot_finished = true; // Indicator for early exiting of rotating phase
+  static unsigned long rot_start_ts = 0;
+  static unsigned long rot_earlyexit_comp = 0;
+
+  if (flight_mode != 3) {
+    // Quadcopter mode: fade pitch offset to 0
+    pitch_offset = floatFaderLinear(pitch_offset, fade_start, fade_end, transition_time_f2q, 1, 2000);
+
+    if (flight_mode_prev == 3) {
+      // Transition from fixed-wing to quadcopter
+      if (is_rot_finished) {
+        rot_earlyexit_comp = 0;
+      }
+      else {
+        float scaling = transition_time_f2q / transition_time_q2f;
+        rot_earlyexit_comp = ((transition_time_q2f * s_to_millis) - (millis() - rot_start_ts)) * scaling;
+      }
+      is_rotating = true;
+      is_rot_finished = false;
+      rot_start_ts = millis() - rot_earlyexit_comp;
+    }
+
+    if (is_rotating) {
+      GyroY += gyro_rot_offset_f2q;
+      if (millis() - rot_start_ts > transition_time_f2q * s_to_millis) {
+        is_rotating = false;
+        is_rot_finished = true;
+      }
+    }
+  } else {
+    // Fixed-wing mode: fade pitch offset to -pi/2
+    pitch_offset = floatFaderLinear(pitch_offset, fade_start, fade_end, transition_time_q2f, 0, 2000);
+
+    if (flight_mode_prev != 3) {
+      // Transition from quadcopter to fixed-wing
+      if (is_rot_finished) {
+        rot_earlyexit_comp = 0;
+      }
+      else {
+        float scaling = transition_time_q2f / transition_time_f2q;
+        rot_earlyexit_comp = ((transition_time_f2q * s_to_millis) - (millis() - rot_start_ts)) * scaling;
+      }
+      is_rotating = true;
+      is_rot_finished = false;
+      rot_start_ts = millis() - rot_earlyexit_comp;
+    }
+
+    if (is_rotating) {
+      GyroY += gyro_rot_offset_q2f;
+      if (millis() - rot_start_ts > transition_time_q2f * s_to_millis) {
+        is_rotating = false;
+        is_rot_finished = true;
+      }
+    }
+  }
+
+  // Rotate the measurement around y axis
+  _rotate_2d(&GyroX, &GyroZ, pitch_offset);
+  _rotate_2d(&AccX, &AccZ, pitch_offset);
+
+  flight_mode_prev = flight_mode; // Update the previously recorded flight mode
 }
 
 void Madgwick6DOF(float gx, float gy, float gz, float ax, float ay, float az, float invSampleFreq)
@@ -1289,6 +1483,20 @@ void calibrateAttitude()
   }
 }
 
+// FIXME: OBSELETE
+// void alterAttitudeRef() {
+//   static float pitch_attitdue_offset = 0.0;
+//   if (flight_mode != 3) {
+//     // In quadcopter-based flight mode, fade the tilt offset to 0
+//     pitch_attitdue_offset = floatFaderLinear(pitch_attitdue_offset, -90.0, 0.0, 1.5, 1, 2000);
+//   }
+//   else {
+//     // In fixed-wing-based flight mode, fade the tilt offset to 90
+//     pitch_attitdue_offset = floatFaderLinear(pitch_attitdue_offset, -90.0, 0.0, 3.0, 0, 2000);
+//   }
+//   pitch_IMU += pitch_attitdue_offset;
+// }
+
 void getDesState()
 {
   // DESCRIPTION: Normalizes desired control values to appropriate values
@@ -1315,6 +1523,30 @@ void getDesState()
   roll_passthru = constrain(roll_passthru, -0.5, 0.5);
   pitch_passthru = constrain(pitch_passthru, -0.5, 0.5);
   yaw_passthru = constrain(yaw_passthru, -0.5, 0.5);
+}
+
+void blendPID() {
+  static float quad_blend_factor = 0.0;
+  if (flight_mode != 3) {
+    // In quadcopter-based flight mode, fade the quad proportion to 1.0
+    quad_blend_factor = floatFaderLinear(quad_blend_factor, 0.0, 1.0, 1.5, 1, 2000);
+  }
+  else {
+    // In fixed-wing-based flight mode, fade the quad proportion to 0.0
+    quad_blend_factor = floatFaderLinear(quad_blend_factor, 0.0, 1.0, 3.0, 0, 2000);
+  }
+
+  Kp_roll_angle = (quad_blend_factor * Kp_roll_quad) + ((1 - quad_blend_factor) * Kp_roll_fixed);
+  Ki_roll_angle = (quad_blend_factor * Ki_roll_quad) + ((1 - quad_blend_factor) * Ki_roll_fixed);
+  Kd_roll_angle = (quad_blend_factor * Kd_roll_quad) + ((1 - quad_blend_factor) * Kd_roll_fixed);
+
+  Kp_pitch_angle = (quad_blend_factor * Kp_pitch_quad) + ((1 - quad_blend_factor) * Kp_pitch_fixed);
+  Ki_pitch_angle = (quad_blend_factor * Ki_pitch_quad) + ((1 - quad_blend_factor) * Ki_pitch_fixed);
+  Kd_pitch_angle = (quad_blend_factor * Kd_pitch_quad) + ((1 - quad_blend_factor) * Kd_pitch_fixed);
+
+  Kp_yaw = (quad_blend_factor * Kp_yaw_quad) + ((1 - quad_blend_factor) * Kp_yaw_fixed);
+  Ki_yaw = (quad_blend_factor * Ki_yaw_quad) + ((1 - quad_blend_factor) * Ki_yaw_fixed);
+  Kd_yaw = (quad_blend_factor * Kd_yaw_quad) + ((1 - quad_blend_factor) * Kd_yaw_fixed);
 }
 
 void controlANGLE()
@@ -1821,78 +2053,6 @@ void calibrateESCs()
   }
 }
 
-float floatFaderLinear(float param, float param_min, float param_max, float fadeTime, int state, int loopFreq)
-{
-  // DESCRIPTION: Linearly fades a float type variable between min and max bounds based on desired high or low state and time
-  /*
-   *  Takes in a float variable, desired minimum and maximum bounds, fade time, high or low desired state, and the loop frequency
-   *  and linearly interpolates that param variable between the maximum and minimum bounds. This function can be called in controlMixer()
-   *  and high/low states can be determined by monitoring the state of an auxillarly radio channel. For example, if channel_6_pwm is being
-   *  monitored to switch between two dynamic configurations (hover and forward flight), this function can be called within the logical
-   *  statements in order to fade controller gains, for example between the two dynamic configurations. The 'state' (1 or 0) can be used
-   *  to designate the two final options for that control gain based on the dynamic configuration assignment to the auxillary radio channel.
-   *
-   */
-  float diffParam = (param_max - param_min) / (fadeTime * loopFreq); // Difference to add or subtract from param for each loop iteration for desired fadeTime
-
-  if (state == 1)
-  { // Maximum param bound desired, increase param by diffParam for each loop iteration
-    param = param + diffParam;
-  }
-  else if (state == 0)
-  { // Minimum param bound desired, decrease param by diffParam for each loop iteration
-    param = param - diffParam;
-  }
-
-  param = constrain(param, param_min, param_max); // Constrain param within max bounds
-
-  return param;
-}
-
-float floatFaderLinear2(float param, float param_des, float param_lower, float param_upper, float fadeTime_up, float fadeTime_down, int loopFreq)
-{
-  // DESCRIPTION: Linearly fades a float type variable from its current value to the desired value, up or down
-  /*
-   *  Takes in a float variable to be modified, desired new position, upper value, lower value, fade time, and the loop frequency
-   *  and linearly fades that param variable up or down to the desired value. This function can be called in controlMixer()
-   *  to fade up or down between flight modes monitored by an auxillary radio channel. For example, if channel_6_pwm is being
-   *  monitored to switch between two dynamic configurations (hover and forward flight), this function can be called within the logical
-   *  statements in order to fade controller gains, for example between the two dynamic configurations.
-   *
-   */
-  if (param > param_des)
-  { // Need to fade down to get to desired
-    float diffParam = (param_upper - param_des) / (fadeTime_down * loopFreq);
-    param = param - diffParam;
-  }
-  else if (param < param_des)
-  { // Need to fade up to get to desired
-    float diffParam = (param_des - param_lower) / (fadeTime_up * loopFreq);
-    param = param + diffParam;
-  }
-
-  param = constrain(param, param_lower, param_upper); // Constrain param within max bounds
-
-  return param;
-}
-
-void switchRollYaw(int reverseRoll, int reverseYaw)
-{
-  // DESCRIPTION: Switches roll_des and yaw_des variables for tailsitter-type configurations
-  /*
-   * Takes in two integers (either 1 or -1) corresponding to the desired reversing of the roll axis and yaw axis, respectively.
-   * Reversing of the roll or yaw axis may be needed when switching between the two for some dynamic configurations. Inputs of 1, 1 does not
-   * reverse either of them, while -1, 1 will reverse the output corresponding to the new roll axis.
-   * This function may be replaced in the future by a function that switches the IMU data instead (so that angle can also be estimated with the
-   * IMU tilted 90 degrees from default level).
-   */
-  float switch_holder;
-
-  switch_holder = yaw_des;
-  yaw_des = reverseYaw * roll_des;
-  roll_des = reverseRoll * switch_holder;
-}
-
 void throttleCut()
 {
   // DESCRIPTION: Directly set actuator outputs to minimum value if triggered
@@ -1975,6 +2135,21 @@ void calibrateMagnetometer()
   Serial.println("Error: MPU9250 not selected. Cannot calibrate non-existent magnetometer.");
   while (1)
     ; // Halt code so it won't enter main loop until this function commented out
+}
+
+void setFlightMode() {
+  if (channel_6_pwm > 900 && channel_6_pwm < 1100) {
+    flight_mode = 0;
+  }
+  else if (channel_6_pwm > 1200 && channel_6_pwm < 1400) {
+    flight_mode = 1;
+  }
+  else if (channel_6_pwm > 1600 && channel_6_pwm < 1800) {
+    flight_mode = 2;
+  }
+  else if (channel_6_pwm > 1900 && channel_6_pwm < 2100) {
+    flight_mode = 3;
+  }
 }
 
 void handleBuzzer() {
@@ -2265,16 +2440,22 @@ void loop()
   armedStatus(); // Check if the throttle cut is off and throttle is low.
 
   // Get vehicle state
-  getIMUdata();                                                              // Pulls raw gyro, accelerometer, and magnetometer data from IMU and LP filters to remove noise
+  getIMUdata(); // Pulls raw gyro, accelerometer, and magnetometer data from IMU and LP filters to remove noise
+  rotateIMUreference(); // Rotate the IMU data to change the attitude reference for difference flight mode
   Madgwick(GyroX, -GyroY, -GyroZ, -AccX, AccY, AccZ, MagY, -MagX, MagZ, dt); // Updates roll_IMU, pitch_IMU, and yaw_IMU angle estimates (degrees)
+
+  // Alter the attitude reference for different flight mode
+  // alterAttitudeRef(); // FIXME: OBSELETE
 
   // Compute desired state
   getDesState(); // Convert raw commands to normalized values based on saturated control limits
 
+  blendPID();
+
   // PID Controller - SELECT ONE:
-  // controlANGLE(); // Stabilize on angle setpoint
+  controlANGLE(); // Stabilize on angle setpoint
   // controlANGLE2(); //Stabilize on angle setpoint using cascaded method. Rate controller must be tuned well first!
-  controlRATE(); //Stabilize on rate setpoint
+  // controlRATE(); //Stabilize on rate setpoint
 
   // Actuator mixing and scaling to PWM values
   controlMixer();  // Mixes PID outputs to scaled actuator commands -- custom mixing assignments done here
@@ -2296,6 +2477,8 @@ void loop()
   // Get vehicle commands for next loop iteration
   getCommands(); // Pulls current available radio commands
   failSafe();    // Prevent failures in event of bad receiver connection, defaults to failsafe values assigned in setup
+
+  setFlightMode();
 
   handleCrsfTelemetry();
   handleBuzzer();
