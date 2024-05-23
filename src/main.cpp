@@ -34,8 +34,8 @@ Everyone that sends me pictures and videos of your flying creations! -Nick
 // IMU_SCL  16 |         | 09  #SVO_FPV
 // IMU_SDA  17 |         | 08
 //          18 |         | 07
-//          19 |   TOP   | 06  #SVO_PAN
-//  RX_FTX  20 |         | 05  #SVO_TLT
+//          19 |   TOP   | 06  #SVO_TLT
+//  RX_FTX  20 |         | 05  #SVO_PAN
 //  RX_FRX  21 |         | 04  M3
 //      M2  22 |         | 03  M4
 //      M1  23 |         | 02  BEPR
@@ -311,7 +311,8 @@ const float Kd_pitch_fixed = 0.025;
 const float Kp_yaw_fixed = 0.3;
 const float Ki_yaw_fixed = 0.05;
 const float Kd_yaw_fixed = 0.00015;
-const int MinTiltAngle = 0;
+const int MinTiltAngle = 30;
+const int MaxTiltAngle = 145;
 
 //========================================================================================================================//
 //                                                     DECLARE PINS                                                       //
@@ -960,10 +961,10 @@ void controlMixer()
 void handleGimbal()
 {
   int pan_velocity; // deg/s
-  pan_velocity = map(channel_7_pwm, 1000, 2000, -60, 60);
+  pan_velocity = map(channel_7_pwm, 1000, 2000, -90, 90);
   s3_command_scaled += (pan_velocity * dt) / 180.0;
   s3_command_scaled = constrain(s3_command_scaled, 0, 1);
-  s4_command_scaled = float(map(channel_8_pwm, 1000, 2000, MinTiltAngle, 180)) / 180;
+  s4_command_scaled = float(map(channel_8_pwm, 1000, 2000, MinTiltAngle, MaxTiltAngle)) / 180;
 }
 
 void armedStatus()
