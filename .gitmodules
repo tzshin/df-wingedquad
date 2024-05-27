@@ -7,6 +7,3 @@
 [submodule "lib/TFMini-Plus"]
 	path = lib/TFMini-Plus
 	url = https://github.com/budryerson/TFMini-Plus.git
-[submodule "lib/PixhawkArduinoMAVLink"]
-	path = lib/PixhawkArduinoMAVLink
-	url = https://github.com/tzshin/PixhawkArduinoMAVLink.git
