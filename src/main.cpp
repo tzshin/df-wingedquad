@@ -958,13 +958,21 @@ void controlMixer()
   }
 }
 
-void handleGimbal()
-{
+void handleGimbal(){
   int pan_velocity; // deg/s
-  pan_velocity = map(channel_7_pwm, 1000, 2000, -90, 90);
-  s3_command_scaled += (pan_velocity * dt) / 180.0;
-  s3_command_scaled = constrain(s3_command_scaled, 0, 1);
-  s4_command_scaled = float(map(channel_8_pwm, 1000, 2000, MinTiltAngle, MaxTiltAngle)) / 180;
+
+  // retarct gimbal during take off & landing
+  if (flight_mode == 0){
+    s3_command_scaled = 0;
+    s4_command_scaled = 0.2;
+  }
+
+  else{
+    pan_velocity = map(channel_7_pwm, 1000, 2000, -90, 90);
+    s3_command_scaled += (pan_velocity * dt) / 180.0;
+    s3_command_scaled = constrain(s3_command_scaled, 0, 1);
+    s4_command_scaled = float(map(channel_8_pwm, 1000, 2000, MinTiltAngle, MaxTiltAngle)) / 180;
+  }
 }
 
 void armedStatus()
