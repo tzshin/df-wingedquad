@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "mpu6050.h": "c",
+        "i2cdev.h": "c"
+    },
+    "cmake.configureOnOpen": false,
+    "C_Cpp.dimInactiveRegions": true
+}
