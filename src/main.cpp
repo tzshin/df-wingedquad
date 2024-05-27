@@ -28,20 +28,20 @@ Everyone that sends me pictures and videos of your flying creations! -Nick
 // Pinout for TZ's FC v1
 // With Teensy 4.0
 // 
-//  SD_SCK  13 +---------+ 12  SD_MISO
-//    VBAT  14 |         | 11  SD_MOSI
-//     CUR  15 |         | 10  #SVO_WNG
-// IMU_SCL  16 |         | 09  #SVO_FPV
-// IMU_SDA  17 |         | 08
-//          18 |         | 07
-//          19 |   TOP   | 06  #SVO_TLT
-//  RX_FTX  20 |         | 05  #SVO_PAN
-//  RX_FRX  21 |         | 04  M3
-//      M2  22 |         | 03  M4
-//      M1  23 |         | 02  BEPR
-//         3V3 |  +---+  | 01  
-//         GND |  |   |  | 00  
-//         Vin +--+---+--+ GND 
+//   SD_SCK  13 +---------+ 12  SD_MISO
+//     VBAT  14 |         | 11  SD_MOSI
+//      CUR  15 |         | 10  
+//  IMU_SCL  16 |         | 09  
+//  IMU_SDA  17 |         | 08  
+// #SVO_WNG  18 |         | 07  
+// #SVO_FPV  19 |   TOP   | 06  #SVO_TLT
+//   RX_FTX  20 |         | 05  #SVO_PAN
+//   RX_FRX  21 |         | 04  M3
+//       M2  22 |         | 03  M4
+//       M1  23 |         | 02  BEPR
+//          3V3 |  +---+  | 01  
+//          GND |  |   |  | 00  
+//          Vin +--+---+--+ GND
 //
 // "#"s are project specific pin config
 // 
@@ -325,8 +325,9 @@ constexpr int SerialGpsBaud = 9600;
 constexpr int SerialAirportBaud = 4800;
 
 constexpr float wingAngleOffset = (35.0 / 180.0) * 1.0;
-constexpr int ffcamAngleFpv = 30;
-constexpr int ffcamAngleFix = 90;
+constexpr int ffcamAngleFpv = 125;
+constexpr int ffcamAngleFix = 38;
+constexpr int ffcamAngleOffset = 10;
 
 constexpr float batVolConvFactor = 3.3 / 1024.0 * 9.1097;  // Check the specific resistors on PCB
 constexpr float batCurConvFactor = 3.3 / 1024.0 / 0.04; // Default 40 mV per A for FPV 4-in-1 ESC
@@ -992,19 +993,19 @@ void controlMixer()
   // 0.5 is centered servo, 0.0 is zero throttle if connecting to ESC for conventional PWM, 1.0 is max throttle
   if (flight_mode == 0 || flight_mode == 1) {
     s1_command_scaled = 0.5 - (pitch_IMU / 180.0) + wingAngleOffset;
-    s2_command_scaled = (ffcamAngleFpv / 180.0);
+    s2_command_scaled = ((ffcamAngleFpv + ffcamAngleOffset)/ 180.0);
     s3_command_scaled = (servo3Default / 180.0);
     s4_command_scaled = (servo4Default / 180.0);
   }
   else if (flight_mode == 2) {
     s1_command_scaled = 0.5 - ((pitch_IMU + 8.0) / 180.0) + wingAngleOffset;
-    s2_command_scaled = (ffcamAngleFpv / 180.0);
+    s2_command_scaled = ((ffcamAngleFpv + ffcamAngleOffset) / 180.0);
     s3_command_scaled = (servo3Default / 180.0);
     s4_command_scaled = (servo4Default / 180.0);
   }
   else if (flight_mode == 3) {
     s1_command_scaled = wingAngleOffset;
-    s2_command_scaled = (ffcamAngleFix / 180.0);
+    s2_command_scaled = ((ffcamAngleFix + ffcamAngleOffset) / 180.0);
   }
 }
 
