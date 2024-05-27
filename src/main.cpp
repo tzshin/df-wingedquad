@@ -91,6 +91,20 @@ Everyone that sends me pictures and videos of your flying creations! -Nick
 
 #include <Arduino.h>
 
+#define power5(x) ((x)*(x)*(x)*(x)*(x))
+
+#define MIN(a,b) \
+  __extension__ ({ __typeof__ (a) _a = (a); \
+  __typeof__ (b) _b = (b); \
+  _a < _b ? _a : _b; })
+#define MAX(a,b) \
+  __extension__ ({ __typeof__ (a) _a = (a); \
+  __typeof__ (b) _b = (b); \
+  _a > _b ? _a : _b; })
+#define ABS(x) \
+  __extension__ ({ __typeof__ (x) _x = (x); \
+  _x > 0 ? _x : -_x; })
+
 constexpr int s_to_millis = 1000;
 constexpr int s_to_micros = 1000000;
 constexpr int pi = 3.14159265359;
@@ -205,6 +219,31 @@ MPU9250 mpu9250(SPI2, 36);
 #endif
 
 //========================================================================================================================//
+//                                            USER-SPECIFIED DATA STRUCTURES                                              //
+//========================================================================================================================//
+
+struct RateProfile {
+    float rcExpo[3];
+    float rcRates[3];
+    float rates[3];
+
+    // Constructor to initialize the values
+    RateProfile(float rcExpo0, float rcExpo1, float rcExpo2,
+                float rcRates0, float rcRates1, float rcRates2,
+                float rates0, float rates1, float rates2) {
+        rcExpo[0] = rcExpo0;
+        rcExpo[1] = rcExpo1;
+        rcExpo[2] = rcExpo2;
+        rcRates[0] = rcRates0;
+        rcRates[1] = rcRates1;
+        rcRates[2] = rcRates2;
+        rates[0] = rates0;
+        rates[1] = rates1;
+        rates[2] = rates2;
+    }
+};
+
+//========================================================================================================================//
 //                                               USER-SPECIFIED VARIABLES                                                 //
 //========================================================================================================================//
 
@@ -291,6 +330,22 @@ constexpr int ffcamAngleFix = 90;
 
 constexpr float batVolConvFactor = 3.3 / 1024.0 * 9.1097;  // Check the specific resistors on PCB
 constexpr float batCurConvFactor = 3.3 / 1024.0 / 0.04; // Default 40 mV per A for FPV 4-in-1 ESC
+
+constexpr float rcExpoRoll = 50.0;
+constexpr float rcRateRoll = 6.0;
+constexpr float rateRoll = 70.0;
+constexpr float rcExpoPitch = 50.0;
+constexpr float rcRatePitch = 6.0;
+constexpr float ratePitch = 70.0;
+constexpr float rcExpoYaw = 30.0;
+constexpr float rcRateYaw = 14.0;
+constexpr float rateYaw = 60.0;
+
+const RateProfile rateProfile(
+  rcExpoRoll, rcExpoPitch, rcExpoYaw,
+  rcRateRoll, rcRatePitch, rcRateYaw,
+  rateRoll, ratePitch, rateYaw
+);
 
 const float Kp_roll_quad = 0.2;
 const float Ki_roll_quad = 0.3;
@@ -1496,6 +1551,18 @@ void calibrateAttitude()
 //   }
 //   pitch_IMU += pitch_attitdue_offset;
 // }
+
+float applyActualRates(const int axis, float rcCommandf, const float rcCommandfAbs)
+{
+    float expof = rateProfile.rcExpo[axis] / 100.0f;
+    expof = rcCommandfAbs * (power5(rcCommandf) * expof + rcCommandf * (1 - expof));
+
+    const float centerSensitivity = rateProfile.rcRates[axis] * 10.0f;
+    const float stickMovement = MAX(0, rateProfile.rates[axis] * 10.0f - centerSensitivity);
+    const float angleRate = rcCommandf * centerSensitivity + stickMovement * expof;
+
+    return angleRate;
+}
 
 void getDesState()
 {
