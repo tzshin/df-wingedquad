@@ -963,7 +963,7 @@ void handleGimbal(){
   static bool pan_retract_start = 1;
   int pan_velocity; // deg/s
   
-  // retarct gimbal during take off & landing
+  // retract gimbal during take off & landing
   if (flight_mode == 0){
     if (pan_retract_start) {
       pan_retract_start_ts = millis();
