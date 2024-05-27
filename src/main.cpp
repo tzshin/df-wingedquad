@@ -32,10 +32,10 @@ Everyone that sends me pictures and videos of your flying creations! -Nick
 //    VBAT  14 |         | 11  SD_MOSI
 //     CUR  15 |         | 10  #SVO_WNG
 // IMU_SCL  16 |         | 09  #SVO_FPV
-// IMU_SDA  17 |         | 08  
-//          18 |         | 07  
-//          19 |   TOP   | 06  #SVO_PAN
-//  RX_FTX  20 |         | 05  #SVO_TLT
+// IMU_SDA  17 |         | 08
+//          18 |         | 07
+//          19 |   TOP   | 06  #SVO_TLT
+//  RX_FTX  20 |         | 05  #SVO_PAN
 //  RX_FRX  21 |         | 04  M3
 //      M2  22 |         | 03  M4
 //      M1  23 |         | 02  BEPR
@@ -260,9 +260,9 @@ unsigned long channel_8_fs = 1500; // Aux3 (observer gimbal tilt-axis)
 #endif
 
 const int servo1Default = 125; // Default servo position (deg)
-const int servo2Default = 90; // TODO: Determine the default poses
-const int servo3Default = 90;
-const int servo4Default = 90;
+const int servo2Default = 90;  // TODO: Determine the default poses
+const int servo3Default = 180;
+const int servo4Default = 145;
 // const int servo5Default = 90;
 // const int servo6Default = 90;
 // const int servo7Default = 90;
@@ -366,6 +366,8 @@ const float Kd_pitch_fixed = 0.025;
 const float Kp_yaw_fixed = 0.3;
 const float Ki_yaw_fixed = 0.05;
 const float Kd_yaw_fixed = 0.00015;
+const int MinTiltAngle = 30;
+const int MaxTiltAngle = 85;
 
 //========================================================================================================================//
 //                                                     DECLARE PINS                                                       //
@@ -1003,8 +1005,33 @@ void controlMixer()
   else if (flight_mode == 3) {
     s1_command_scaled = wingAngleOffset;
     s2_command_scaled = (ffcamAngleFix / 180.0);
-    s3_command_scaled = (servo3Default / 180.0);
-    s4_command_scaled = (servo4Default / 180.0);
+  }
+}
+
+void handleGimbal(){
+  static unsigned long pan_retract_start_ts = 0;
+  static bool pan_retract_start = 1;
+  int pan_velocity; // deg/s
+  
+  // retract gimbal during take off & landing
+  if (flight_mode == 0){
+    if (pan_retract_start) {
+      pan_retract_start_ts = millis();
+      pan_retract_start = 0;
+    }
+    if (millis() - pan_retract_start_ts > 500 ) {
+      s4_command_scaled = floatFaderLinear(s4_command_scaled, 0 , 145.0/180.0 , 0.5 , 1 , 1000);
+      pan_retract_start_ts = 0;
+    }
+    s3_command_scaled = 1;
+  }
+
+  else{
+    pan_retract_start = 1;
+    pan_velocity = map(channel_7_pwm, 1000, 2000, -90, 90);
+    s3_command_scaled += (pan_velocity * dt) / 180.0;
+    s3_command_scaled = constrain(s3_command_scaled, 0, 1);
+    s4_command_scaled = float(map(channel_8_pwm, 1000, 2000, MinTiltAngle, MaxTiltAngle)) / 180;
   }
 }
 
@@ -2500,7 +2527,7 @@ void loop()
   // printRollPitchYaw();  //Prints roll, pitch, and yaw angles in degrees from Madgwick filter (expected: degrees, 0 when level)
   // printPIDoutput();     //Prints computed stabilized PID variables from controller and desired setpoint (expected: ~ -1 to 1)
   // printMotorCommands(); //Prints the values being written to the motors (expected: 120 to 250)
-  // printServoCommands(); //Prints the values being written to the servos (expected: 0 to 180)
+   printServoCommands(); //Prints the values being written to the servos (expected: 0 to 180)
   // printLoopRate();      //Prints the time between loops in microseconds (expected: microseconds between loop iterations)
 
   // Get arming status
