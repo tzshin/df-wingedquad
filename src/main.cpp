@@ -324,7 +324,7 @@ float Kd_yaw = 0.0; // Yaw D-gain (be careful when increasing too high, motors w
 constexpr int SerialGpsBaud = 9600;
 constexpr int SerialAirportBaud = 4800;
 
-constexpr float wingAngleOffset = (35.0 / 180.0) * 1.0;
+constexpr float wingAngleOffset = (10.0 / 180.0) * 1.0;
 constexpr int ffcamAngleFpv = 125;
 constexpr int ffcamAngleFix = 38;
 constexpr int ffcamAngleOffset = 10;
@@ -992,19 +992,19 @@ void controlMixer()
 
   // 0.5 is centered servo, 0.0 is zero throttle if connecting to ESC for conventional PWM, 1.0 is max throttle
   if (flight_mode == 0 || flight_mode == 1) {
-    s1_command_scaled = 0.5 - (pitch_IMU / 180.0) + wingAngleOffset;
+    s1_command_scaled = 0.5 + (pitch_IMU / 180.0) + wingAngleOffset;
     s2_command_scaled = ((ffcamAngleFpv + ffcamAngleOffset)/ 180.0);
     s3_command_scaled = (servo3Default / 180.0);
     s4_command_scaled = (servo4Default / 180.0);
   }
   else if (flight_mode == 2) {
-    s1_command_scaled = 0.5 - ((pitch_IMU + 8.0) / 180.0) + wingAngleOffset;
+    s1_command_scaled = 0.5 + ((pitch_IMU + 8.0) / 180.0) + wingAngleOffset;
     s2_command_scaled = ((ffcamAngleFpv + ffcamAngleOffset) / 180.0);
     s3_command_scaled = (servo3Default / 180.0);
     s4_command_scaled = (servo4Default / 180.0);
   }
   else if (flight_mode == 3) {
-    s1_command_scaled = wingAngleOffset;
+    s1_command_scaled = 1.0;
     s2_command_scaled = ((ffcamAngleFix + ffcamAngleOffset) / 180.0);
   }
 }
