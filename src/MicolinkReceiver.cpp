@@ -1,9 +1,20 @@
 #include "MicolinkReceiver.h"
 
+explicit MicoIIRFilter::MicoIIRFilter(float alpha = 0.7) : alpha(alpha) {}
+
+float MicoIIRFilter::filter(float input) {
+    prev_output = prev_output = alpha * input + (1 - alpha) * prev_output;
+    return prev_output;
+}
+
+void MicoIIRFilter::set_alpha(float new_alpha) {
+    alpha = new_alpha;
+}
+
 MicolinkReceiver::MicolinkReceiver(HardwareSerial& serialPort) : serial(serialPort) {}
 
 void MicolinkReceiver::begin(long baudRate) {
-    this->serial.begin(baudRate);
+    serial.begin(baudRate);
 }
 
 uint8_t MicolinkReceiver::calculate_checksum(const uint8_t* data, size_t length) const {
@@ -52,31 +63,31 @@ bool MicolinkReceiver::receive() {
                 // Verify checksum
                 if (received_checksum == calculated_checksum) {
                     // Parse the payload
-                    this->data.system_time = (uint32_t)payload[0] |
+                    data.system_time = (uint32_t)payload[0] |
                                              ((uint32_t)payload[1] << 8) |
                                              ((uint32_t)payload[2] << 16) |
                                              ((uint32_t)payload[3] << 24);
-                    this->data.raw_distance = (uint32_t)payload[4] |
+                    data.raw_distance = (uint32_t)payload[4] |
                                               ((uint32_t)payload[5] << 8) |
                                               ((uint32_t)payload[6] << 16) |
                                               ((uint32_t)payload[7] << 24);
-                    this->data.signal_strength = payload[8];
-                    this->data.reserved1 = payload[9];
-                    this->data.distance_status = payload[10];
-                    this->data.reserved2 = payload[11];
-                    this->data.raw_flow_speed_x = (int16_t)payload[12] |
+                    data.signal_strength = payload[8];
+                    data.reserved1 = payload[9];
+                    data.distance_status = payload[10];
+                    data.reserved2 = payload[11];
+                    data.raw_flow_speed_x = (int16_t)payload[12] |
                                                   ((int16_t)payload[13] << 8);
-                    this->data.raw_flow_speed_y = (int16_t)payload[14] |
+                    data.raw_flow_speed_y = (int16_t)payload[14] |
                                                   ((int16_t)payload[15] << 8);
-                    this->data.flow_quality = payload[16];
-                    this->data.flow_status = payload[17];
-                    this->data.reserved3 = (uint16_t)payload[18] |
+                    data.flow_quality = payload[16];
+                    data.flow_status = payload[17];
+                    data.reserved3 = (uint16_t)payload[18] |
                                            ((uint16_t)payload[19] << 8);
 
                     // Convert raw unit to SI unit
-                    this->data.distance = data.raw_distance * DISTANCE_CONVERSION_FACTOR;
-                    this->data.flow_speed_x = data.raw_flow_speed_x * FLOW_SPEED_CONVERSION_FACTOR;
-                    this->data.flow_speed_y = data.raw_flow_speed_y * FLOW_SPEED_CONVERSION_FACTOR;
+                    data.distance = distance_filter.filter(data.raw_distance * DISTANCE_CONVERSION_FACTOR);
+                    data.flow_speed_x = flow_speed_x_filter.filter(data.raw_flow_speed_x * FLOW_SPEED_CONVERSION_FACTOR);
+                    data.flow_speed_y = flow_speed_y_filter.filter(data.raw_flow_speed_y * FLOW_SPEED_CONVERSION_FACTOR);
 
                     return true;
                 } else {
@@ -86,4 +97,10 @@ bool MicolinkReceiver::receive() {
         }
     }
     return false; // Not enough data available
+}
+
+void MicolinkReceiver::set_filter_alpha(float alpha) {
+    distance_filter.set_alpha(alpha);
+    flow_speed_x_filter.set_alpha(alpha);
+    flow_speed_y_filter.set_alpha(alpha);
 }

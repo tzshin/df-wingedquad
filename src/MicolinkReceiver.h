@@ -20,12 +20,26 @@ struct MicoSensorData {
     float flow_speed_y;  // Flow speed in m/s at 1 m
 };
 
+
+class MicoIIRFilter {
+public:
+    explicit MicoIIRFilter(float alpha = 0.7);
+
+    float filter(float input);
+    void set_alpha(float alpha);
+private:
+    float alpha = 0.0;
+    float prev_output = 0.0;
+};
+
+
 class MicolinkReceiver {
 public:
     explicit MicolinkReceiver(HardwareSerial& serial_port);
 
     void begin(long baud_rate);
     bool receive();
+    void set_filter_alpha(float alpha);
 
     MicoSensorData data;
 private:
@@ -38,6 +52,10 @@ private:
 
     static constexpr float DISTANCE_CONVERSION_FACTOR = 0.001;  // Convert mm to m
     static constexpr float FLOW_SPEED_CONVERSION_FACTOR = 0.01;  // Convert cm/s to m/s (at 1 m)
+
+    MicoIIRFilter distance_filter;
+    MicoIIRFilter flow_speed_x_filter;
+    MicoIIRFilter flow_speed_y_filter;
 
     uint8_t calculate_checksum(const uint8_t* data, size_t length) const;
 };
