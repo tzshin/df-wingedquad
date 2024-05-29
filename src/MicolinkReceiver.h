@@ -23,7 +23,7 @@ struct MicoSensorData {
 
 class MicoIIRFilter {
 public:
-    explicit MicoIIRFilter(float alpha = 0.7);
+    explicit MicoIIRFilter(float alpha = 1.0);
 
     float filter(float input);
     void set_alpha(float alpha);

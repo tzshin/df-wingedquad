@@ -1,9 +1,9 @@
 #include "MicolinkReceiver.h"
 
-explicit MicoIIRFilter::MicoIIRFilter(float alpha = 0.7) : alpha(alpha) {}
+MicoIIRFilter::MicoIIRFilter(float alpha) : alpha(alpha) {}
 
 float MicoIIRFilter::filter(float input) {
-    prev_output = prev_output = alpha * input + (1 - alpha) * prev_output;
+    prev_output = alpha * input + (1 - alpha) * prev_output;
     return prev_output;
 }
 
@@ -11,7 +11,11 @@ void MicoIIRFilter::set_alpha(float new_alpha) {
     alpha = new_alpha;
 }
 
-MicolinkReceiver::MicolinkReceiver(HardwareSerial& serialPort) : serial(serialPort) {}
+MicolinkReceiver::MicolinkReceiver(HardwareSerial& serialPort)
+    : serial(serialPort),
+      distance_filter(0.15),
+      flow_speed_x_filter(0.15),
+      flow_speed_y_filter(0.15) {}
 
 void MicolinkReceiver::begin(long baudRate) {
     serial.begin(baudRate);
