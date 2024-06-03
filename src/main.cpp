@@ -145,6 +145,7 @@ constexpr int pi = 3.14159265359;
 #include <PWMServo.h> // Commanding any extra actuators, installed with teensyduino installer
 
 #include <TinyGPSPlus.h> // GPS
+#include <MicolinkReceiver.h> // MTF-01 optical-flow and distance sensor
 
 #if defined USE_SBUS_RX
 #include "SBUS.h" // sBus interface
@@ -323,6 +324,7 @@ float Kd_yaw = 0.0; // Yaw D-gain (be careful when increasing too high, motors w
 
 constexpr int SerialGpsBaud = 9600;
 constexpr int SerialAirportBaud = 4800;
+constexpr int MicoBaud = 115200;
 
 constexpr float wingAngleOffset = (10.0 / 180.0) * 1.0;
 constexpr int ffcamAngleFpv = 125;
@@ -507,6 +509,11 @@ HardwareSerial& SerialGps =     Serial1;
 HardwareSerial& SerialAirport = Serial7;
 
 TinyGPSPlus gps;
+
+MicolinkReceiver mico(Serial2);
+
+float distance_MICO, flow_speed_x_MICO, flow_speed_y_MICO;
+float climb_PID = 0.0;
 
 //========================================================================================================================//
 //                                                       FORWARD                                                          //
@@ -981,14 +988,19 @@ void controlMixer()
     quad_blend_factor = floatFaderLinear(quad_blend_factor, 0.0, 1.0, 3.0, 0, 2000);
   }
 
-  m1_command_scaled = quad_blend_factor * (thro_des + pitch_PID - roll_PID + yaw_PID);
-  m2_command_scaled = quad_blend_factor * (thro_des - pitch_PID - roll_PID - yaw_PID);
-  m3_command_scaled = quad_blend_factor * (thro_des + pitch_PID + roll_PID - yaw_PID);
-  m4_command_scaled = quad_blend_factor * (thro_des - pitch_PID + roll_PID + yaw_PID);
-  m1_command_scaled += (1 - quad_blend_factor) * (thro_des + pitch_PID + roll_PID + yaw_PID);
-  m2_command_scaled += (1 - quad_blend_factor) * (thro_des - pitch_PID - roll_PID + yaw_PID);
-  m3_command_scaled += (1 - quad_blend_factor) * (thro_des + pitch_PID + roll_PID - yaw_PID);
-  m4_command_scaled += (1 - quad_blend_factor) * (thro_des - pitch_PID - roll_PID - yaw_PID);
+  m1_command_scaled = quad_blend_factor * (thro_des + pitch_PID - roll_PID + yaw_PID + climb_PID);
+  m2_command_scaled = quad_blend_factor * (thro_des - pitch_PID - roll_PID - yaw_PID + climb_PID);
+  m3_command_scaled = quad_blend_factor * (thro_des + pitch_PID + roll_PID - yaw_PID + climb_PID);
+  m4_command_scaled = quad_blend_factor * (thro_des - pitch_PID + roll_PID + yaw_PID + climb_PID);
+  m1_command_scaled += (1 - quad_blend_factor) * (thro_des + pitch_PID + roll_PID + yaw_PID + climb_PID);
+  m2_command_scaled += (1 - quad_blend_factor) * (thro_des - pitch_PID - roll_PID + yaw_PID + climb_PID);
+  m3_command_scaled += (1 - quad_blend_factor) * (thro_des + pitch_PID + roll_PID - yaw_PID + climb_PID);
+  m4_command_scaled += (1 - quad_blend_factor) * (thro_des - pitch_PID - roll_PID - yaw_PID + climb_PID);
+
+  // m1_command_scaled = 0.0;
+  // m2_command_scaled = 0.0;
+  // m3_command_scaled = 0.0;
+  // m4_command_scaled = 0.0;
 
   // 0.5 is centered servo, 0.0 is zero throttle if connecting to ESC for conventional PWM, 1.0 is max throttle
   if (flight_mode == 0 || flight_mode == 1) {
@@ -2262,6 +2274,17 @@ void handleGps() {
   }
 }
 
+void getMicoData() {
+  constexpr static float alpha_distance = 0.02;
+  constexpr static float alpha_flow_speed = 0.02;
+
+  mico.receive();
+
+  distance_MICO = alpha_distance * mico.data.distance + (1 - alpha_distance) * distance_MICO;
+  flow_speed_x_MICO = alpha_flow_speed * mico.data.flow_speed_x + (1 - alpha_flow_speed) * flow_speed_x_MICO;
+  flow_speed_y_MICO = alpha_flow_speed * mico.data.flow_speed_y + (1 - alpha_flow_speed) * flow_speed_y_MICO;
+}
+
 void printRadioData()
 {
   if (current_time - print_counter > 10000)
@@ -2371,6 +2394,8 @@ void printPIDoutput()
     Serial.println(pitch_PID);
     Serial.print(F(">yaw_PID:"));
     Serial.println(yaw_PID);
+    Serial.print(F(">climb_PID:"));
+    Serial.println(climb_PID, 4);
   }
 }
 
@@ -2422,6 +2447,20 @@ void printLoopRate()
   }
 }
 
+void printMicoData()
+{
+  if (current_time - print_counter > 10000)
+  {
+    print_counter = micros();
+    Serial.print(F(">distance:"));
+    Serial.println(mico.data.distance, 4);
+    Serial.print(F(">flow_speed_x:"));
+    Serial.println(mico.data.flow_speed_x, 4);
+    Serial.print(F(">flow_speed_y:"));
+    Serial.println(mico.data.flow_speed_y, 4);
+  }
+}
+
 //========================================================================================================================//
 //                                                      VOID SETUP                                                        //
 //========================================================================================================================//
@@ -2432,6 +2471,8 @@ void setup()
   // while (!Serial) {} // Making sure the serial monitor is connected while debugging
   SerialAirport.begin(SerialAirportBaud);
   SerialGps.begin(SerialGpsBaud);
+  mico.begin(MicoBaud);
+  mico.set_filter_alpha(0.15);
   delay(500);
 
   // Initialize all pins
@@ -2528,8 +2569,9 @@ void loop()
   // printRollPitchYaw();  //Prints roll, pitch, and yaw angles in degrees from Madgwick filter (expected: degrees, 0 when level)
   // printPIDoutput();     //Prints computed stabilized PID variables from controller and desired setpoint (expected: ~ -1 to 1)
   // printMotorCommands(); //Prints the values being written to the motors (expected: 120 to 250)
-   printServoCommands(); //Prints the values being written to the servos (expected: 0 to 180)
+  // printServoCommands(); //Prints the values being written to the servos (expected: 0 to 180)
   // printLoopRate();      //Prints the time between loops in microseconds (expected: microseconds between loop iterations)
+  // printMicoData();
 
   // Get arming status
   armedStatus(); // Check if the throttle cut is off and throttle is low.
@@ -2578,6 +2620,8 @@ void loop()
   handleCrsfTelemetry();
   handleBuzzer();
   handleGps();
+
+  getMicoData();
 
   // Regulate loop rate
   loopRate(2000); // Do not exceed 2000Hz, all filter parameters tuned to 2000Hz by default
