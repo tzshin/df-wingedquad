@@ -1890,6 +1890,26 @@ void controlRATE()
 
 void controlCLIMB()
 {
+  static float distance_MICO_prev;
+  static float error_climb , error_climb_prev , integral_climb_prev , integral_climb , derivative_climb;
+  constexpr float Kp_climb = 2;
+  constexpr float Ki_climb = 0; 
+  constexpr float Kd_climb = 0.1;
+  float climb = ( distance_MICO - distance_MICO_prev ) / dt;
+  error_climb = climb_des - climb;
+  derivative_climb = ( error_climb - error_climb_prev ) / dt;
+  integral_climb = integral_climb_prev + error_climb * dt;
+  if (channel_3_pwm < 1060)
+  { // Don't let integrator build if throttle is too low
+    integral_climb = 0;
+  }
+  integral_climb = constrain(integral_climb, -i_limit, i_limit);
+  climb_PID = 0.1 * (Kp_climb * error_climb + Ki_climb * integral_climb + Kd_climb * derivative_climb);
+  
+  // Update variables
+  error_climb_prev = error_climb;
+  integral_climb_prev = integral_climb;
+  distance_MICO_prev = distance_MICO;
 }
 
 void scaleCommands()
