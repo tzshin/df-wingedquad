@@ -513,6 +513,7 @@ TinyGPSPlus gps;
 MicolinkReceiver mico(Serial2);
 
 float distance_MICO, flow_speed_x_MICO, flow_speed_y_MICO;
+float climb_des;
 float climb_PID = 0.0;
 
 //========================================================================================================================//
@@ -1618,6 +1619,7 @@ void getDesState()
   roll_des = (channel_1_pwm - 1500.0) / 500.0;  // Between -1 and 1
   pitch_des = (channel_2_pwm - 1500.0) / 500.0; // Between -1 and 1
   yaw_des = (channel_4_pwm - 1500.0) / 500.0;   // Between -1 and 1
+  climb_des = (channel_3_pwm - 1500.0) / 500.0; // Between -1 and 1
   roll_passthru = roll_des / 2.0;               // Between -0.5 and 0.5
   pitch_passthru = pitch_des / 2.0;             // Between -0.5 and 0.5
   yaw_passthru = yaw_des / 2.0;                 // Between -0.5 and 0.5
