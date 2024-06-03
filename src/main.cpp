@@ -224,24 +224,24 @@ MPU9250 mpu9250(SPI2, 36);
 //========================================================================================================================//
 
 struct RateProfile {
-    float rcExpo[3];
-    float rcRates[3];
-    float rates[3];
+  float rcExpo[3];
+  float rcRates[3];
+  float rates[3];
 
     // Constructor to initialize the values
-    RateProfile(float rcExpo0, float rcExpo1, float rcExpo2,
-                float rcRates0, float rcRates1, float rcRates2,
-                float rates0, float rates1, float rates2) {
-        rcExpo[0] = rcExpo0;
-        rcExpo[1] = rcExpo1;
-        rcExpo[2] = rcExpo2;
-        rcRates[0] = rcRates0;
-        rcRates[1] = rcRates1;
-        rcRates[2] = rcRates2;
-        rates[0] = rates0;
-        rates[1] = rates1;
-        rates[2] = rates2;
-    }
+  RateProfile(float rcExpo0, float rcExpo1, float rcExpo2,
+              float rcRates0, float rcRates1, float rcRates2,
+              float rates0, float rates1, float rates2) {
+    rcExpo[0] = rcExpo0;
+    rcExpo[1] = rcExpo1;
+    rcExpo[2] = rcExpo2;
+    rcRates[0] = rcRates0;
+    rcRates[1] = rcRates1;
+    rcRates[2] = rcRates2;
+    rates[0] = rates0;
+    rates[1] = rates1;
+    rates[2] = rates2;
+  }
 };
 
 //========================================================================================================================//
