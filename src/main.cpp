@@ -373,6 +373,12 @@ const float Kd_yaw_fixed = 0.00015;
 const int MinTiltAngle = 30;
 const int MaxTiltAngle = 85;
 
+constexpr float maxClimb = 1.0; // Maximum climb rate in m/s
+constexpr float minClimb = 0.3; // Minimum climb rate to maintain after buffering in m/s
+constexpr float climbHeightMax = 2.5;
+constexpr float climbHeightMin = 0.0;
+constexpr float climbBufferZone = 0.7;
+
 //========================================================================================================================//
 //                                                     DECLARE PINS                                                       //
 //========================================================================================================================//
@@ -1651,6 +1657,17 @@ void getDesState()
   roll_passthru = roll_des / 2.0;               // Between -0.5 and 0.5
   pitch_passthru = pitch_des / 2.0;             // Between -0.5 and 0.5
   yaw_passthru = yaw_des / 2.0;                 // Between -0.5 and 0.5
+
+  float climb_slope = maxClimb;
+  if (distance_MICO < climbHeightMin + climbBufferZone)
+  {
+    climb_slope *= minClimb + ((maxClimb - minClimb) * (distance_MICO - climbHeightMin) / climbBufferZone);
+  }
+  else if (distance_MICO > climbHeightMax - climbBufferZone)
+  {
+    climb_slope *= minClimb + ((maxClimb - minClimb) * (climbHeightMax - distance_MICO) / climbBufferZone);
+  }
+  climb_des = constrain(climb_des, -1.0, 1.0) * climb_slope;
 
   // Constrain within normalized bounds
   thro_des = constrain(thro_des, 0.0, 1.0);               // Between 0 and 1
