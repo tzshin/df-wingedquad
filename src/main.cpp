@@ -1000,14 +1000,14 @@ void controlMixer()
     quad_blend_factor = floatFaderLinear(quad_blend_factor, 0.0, 1.0, 3.0, 0, 2000);
   }
 
-  m1_command_scaled = quad_blend_factor * (thro_des + pitch_PID - roll_PID + yaw_PID + climb_PID);
-  m2_command_scaled = quad_blend_factor * (thro_des - pitch_PID - roll_PID - yaw_PID + climb_PID);
-  m3_command_scaled = quad_blend_factor * (thro_des + pitch_PID + roll_PID - yaw_PID + climb_PID);
-  m4_command_scaled = quad_blend_factor * (thro_des - pitch_PID + roll_PID + yaw_PID + climb_PID);
-  m1_command_scaled += (1 - quad_blend_factor) * (thro_des + pitch_PID + roll_PID + yaw_PID + climb_PID);
-  m2_command_scaled += (1 - quad_blend_factor) * (thro_des - pitch_PID - roll_PID + yaw_PID + climb_PID);
-  m3_command_scaled += (1 - quad_blend_factor) * (thro_des + pitch_PID + roll_PID - yaw_PID + climb_PID);
-  m4_command_scaled += (1 - quad_blend_factor) * (thro_des - pitch_PID - roll_PID - yaw_PID + climb_PID);
+  m1_command_scaled = quad_blend_factor * (pitch_PID - roll_PID + yaw_PID + climb_PID);
+  m2_command_scaled = quad_blend_factor * (pitch_PID - roll_PID - yaw_PID + climb_PID);
+  m3_command_scaled = quad_blend_factor * (pitch_PID + roll_PID - yaw_PID + climb_PID);
+  m4_command_scaled = quad_blend_factor * (pitch_PID + roll_PID + yaw_PID + climb_PID);
+  m1_command_scaled += (1 - quad_blend_factor) * (pitch_PID + roll_PID + yaw_PID + climb_PID);
+  m2_command_scaled += (1 - quad_blend_factor) * (pitch_PID - roll_PID + yaw_PID + climb_PID);
+  m3_command_scaled += (1 - quad_blend_factor) * (pitch_PID + roll_PID - yaw_PID + climb_PID);
+  m4_command_scaled += (1 - quad_blend_factor) * (pitch_PID - roll_PID - yaw_PID + climb_PID);
 
   // m1_command_scaled = 0.0;
   // m2_command_scaled = 0.0;
