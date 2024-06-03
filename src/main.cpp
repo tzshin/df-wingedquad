@@ -1857,6 +1857,11 @@ void controlRATE()
   integral_yaw_prev = integral_yaw;
 }
 
+void controlCLIMB()
+{
+  
+}
+
 void scaleCommands()
 {
   // DESCRIPTION: Scale normalized actuator commands to values for ESC/Servo protocol
@@ -2595,6 +2600,8 @@ void loop()
   controlANGLE(); // Stabilize on angle setpoint
   // controlANGLE2(); //Stabilize on angle setpoint using cascaded method. Rate controller must be tuned well first!
   // controlRATE(); //Stabilize on rate setpoint
+
+  controlCLIMB();
 
   // Actuator mixing and scaling to PWM values
   controlMixer();  // Mixes PID outputs to scaled actuator commands -- custom mixing assignments done here
