@@ -294,8 +294,8 @@ float GyroErrorZ = 3.89;
 
 // Controller parameters (take note of defaults before modifying!):
 float i_limit = 25.0;  // Integrator saturation level, mostly for safety (default 25.0)
-float maxRoll = 30.0;  // Max roll angle in degrees for angle mode (maximum ~70 degrees), deg/sec for rate mode
-float maxPitch = 30.0; // Max pitch angle in degrees for angle mode (maximum ~70 degrees), deg/sec for rate mode
+float maxRoll = 60.0;  // Max roll angle in degrees for angle mode (maximum ~70 degrees), deg/sec for rate mode
+float maxPitch = 60.0; // Max pitch angle in degrees for angle mode (maximum ~70 degrees), deg/sec for rate mode
 float maxYaw = 160.0;  // Max yaw rate in deg/sec
 
 float Kp_roll_angle = 0.0;  // Roll P-gain - angle mode
