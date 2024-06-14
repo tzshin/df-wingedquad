@@ -30,17 +30,17 @@ Everyone that sends me pictures and videos of your flying creations! -Nick
 // 
 //   SD_SCK  13 +---------+ 12  SD_MISO
 //     VBAT  14 |         | 11  SD_MOSI
-//      CUR  15 |         | 10  
-//  IMU_SCL  16 |         | 09  
-//  IMU_SDA  17 |         | 08  
-// #SVO_WNG  18 |         | 07  
-// #SVO_FPV  19 |   TOP   | 06  #SVO_TLT
+//      CUR  15 |         | 10
+//  IMU_SCL  16 |         | 09
+//  IMU_SDA  17 |         | 08
+//  BMP_SDA  18 |         | 07
+//  BMP_SCL  19 |   TOP   | 06  #SVO_TLT
 //   RX_FTX  20 |         | 05  #SVO_PAN
 //   RX_FRX  21 |         | 04  M3
 //       M2  22 |         | 03  M4
 //       M1  23 |         | 02  BEPR
-//          3V3 |  +---+  | 01  
-//          GND |  |   |  | 00  
+//          3V3 |  +---+  | 01  #SVO_FPV
+//          GND |  |   |  | 00  #SVO_WNG
 //          Vin +--+---+--+ GND
 //
 // "#"s are project specific pin config
@@ -394,8 +394,8 @@ const int m3Pin = 4;
 const int m4Pin = 3;
 
 // PWM servo or ESC outputs:
-const int servo1Pin = 18; // Wing rotating
-const int servo2Pin = 19; // FPV camera angle changing
+const int servo1Pin = 0; // Wing rotating
+const int servo2Pin = 1; // FPV camera angle changing
 const int servo3Pin = 5;  // Observer gimbal pan-axis
 const int servo4Pin = 6;  // Observer gimbal tilt_axis
 // const int servo5Pin = 0;
